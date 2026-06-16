@@ -9,101 +9,90 @@
 <title>Inclinòmetre Moto</title>
 <style>
   :root{
-    --bg:#0E1116;
-    --panel:#161B22;
-    --line:#252C36;
-    --ink:#E8EEF4;
-    --dim:#8595A6;
-    --lean:#FF6B2C;     /* àmbar inclinació */
-    --speed:#3FE0D0;    /* cian velocitat */
-    --warn:#F2C14E;
-    --bad:#E5484D;
-    --good:#4ED27A;
+    --bg:#0E1116; --panel:#161B22; --line:#252C36; --ink:#E8EEF4; --dim:#8595A6;
+    --lean:#FF6B2C; --speed:#3FE0D0; --warn:#F2C14E; --bad:#E5484D; --good:#4ED27A;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
   body{
-    background:var(--bg);
-    color:var(--ink);
+    background:var(--bg);color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    font-variant-numeric:tabular-nums;
-    overflow:hidden;
-    display:flex;flex-direction:column;
-    height:100dvh;
-    user-select:none;-webkit-user-select:none;
+    font-variant-numeric:tabular-nums;overflow:hidden;display:flex;flex-direction:column;
+    height:100dvh;user-select:none;-webkit-user-select:none;
   }
-  .topbar{
-    display:flex;align-items:center;justify-content:space-between;
-    padding:14px 18px calc(14px + env(safe-area-inset-top)) 18px;
-    border-bottom:1px solid var(--line);
-  }
+  .topbar{display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px calc(14px + env(safe-area-inset-top)) 16px;border-bottom:1px solid var(--line)}
   .brand{display:flex;align-items:baseline;gap:8px}
   .brand b{font-weight:800;letter-spacing:-0.02em;font-size:17px}
   .brand span{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:0.14em}
+  .topright{display:flex;align-items:center;gap:14px}
+  .mini{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;
+    border:1px solid var(--line);padding:5px 9px;border-radius:8px;background:var(--panel)}
+  .mini.on{color:#1a0d04;background:var(--warn);border-color:var(--warn)}
   .gps{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--dim)}
-  .dot{width:9px;height:9px;border-radius:50%;background:var(--bad);box-shadow:0 0 0 0 rgba(229,72,77,.5)}
-  .dot.live{background:var(--good)}
-  .dot.search{background:var(--warn);animation:pulse 1.2s infinite}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--bad)}
+  .dot.live{background:var(--good)} .dot.search{background:var(--warn);animation:pulse 1.2s infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(242,193,78,.5)}70%{box-shadow:0 0 0 8px rgba(242,193,78,0)}100%{box-shadow:0 0 0 0 rgba(242,193,78,0)}}
 
-  /* ---- HORITZÓ (element signatura) ---- */
   .stage{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
   .horizon-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
   #horizon{display:block}
-  .readout{
-    position:relative;z-index:3;text-align:center;pointer-events:none;
-  }
-  .lean-num{
-    font-size:clamp(80px,30vw,150px);font-weight:800;line-height:.9;
-    letter-spacing:-0.04em;color:var(--lean);
-    text-shadow:0 2px 30px rgba(255,107,44,.25);
-  }
+  .readout{position:relative;z-index:3;text-align:center;pointer-events:none}
+  .lean-num{font-size:clamp(80px,30vw,150px);font-weight:800;line-height:.9;letter-spacing:-0.04em;
+    color:var(--lean);text-shadow:0 2px 30px rgba(255,107,44,.25)}
   .lean-num .deg{font-size:.4em;vertical-align:super;color:var(--dim);font-weight:600;margin-left:2px}
   .lean-side{font-size:13px;text-transform:uppercase;letter-spacing:0.28em;color:var(--dim);margin-top:4px}
+  .src{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;margin-top:10px;color:var(--dim)}
+  .src b{color:var(--good)} .src.gpsonly b{color:var(--warn)}
 
-  /* ---- DADES INFERIORS ---- */
-  .grid{
-    display:grid;grid-template-columns:repeat(3,1fr);
-    border-top:1px solid var(--line);
-  }
-  .cell{padding:14px 10px;text-align:center;border-right:1px solid var(--line)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}
+  .cell{padding:14px 8px;text-align:center;border-right:1px solid var(--line)}
   .cell:last-child{border-right:none}
   .cell .v{font-size:26px;font-weight:700;letter-spacing:-0.02em}
-  .cell .v.sp{color:var(--speed)}
-  .cell .v.mx{color:var(--lean)}
-  .cell .k{font-size:10px;text-transform:uppercase;letter-spacing:0.16em;color:var(--dim);margin-top:3px}
+  .cell .v.sp{color:var(--speed)} .cell .v.mx{color:var(--lean)}
+  .cell .k{font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--dim);margin-top:3px}
   .cell .u{font-size:13px;color:var(--dim);font-weight:500}
 
-  /* ---- CONTROLS ---- */
   .controls{display:flex;gap:10px;padding:12px 14px calc(14px + env(safe-area-inset-bottom)) 14px;border-top:1px solid var(--line)}
-  button{
-    flex:1;border:1px solid var(--line);background:var(--panel);color:var(--ink);
-    font-size:15px;font-weight:600;padding:15px 10px;border-radius:13px;cursor:pointer;
-    font-family:inherit;transition:transform .06s,background .15s,border-color .15s;
-  }
+  button{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:15px;
+    font-weight:600;padding:15px 8px;border-radius:13px;cursor:pointer;font-family:inherit;
+    transition:transform .06s,background .15s,border-color .15s}
   button:active{transform:scale(.97)}
   button.primary{background:var(--lean);border-color:var(--lean);color:#1a0d04}
   button.rec{background:var(--bad);border-color:var(--bad);color:#fff}
+  button.ok{border-color:var(--good)}
   button:disabled{opacity:.4;cursor:default}
-  button .sub{display:block;font-size:10px;font-weight:500;opacity:.7;margin-top:2px;text-transform:uppercase;letter-spacing:0.1em}
+  button .sub{display:block;font-size:10px;font-weight:500;opacity:.75;margin-top:2px;text-transform:uppercase;letter-spacing:0.08em}
 
-  /* ---- OVERLAY INICI / AVISOS ---- */
   .overlay{position:absolute;inset:0;z-index:10;background:var(--bg);display:flex;flex-direction:column;
     align-items:center;justify-content:center;padding:32px;text-align:center;gap:18px}
   .overlay h1{font-size:24px;font-weight:800;letter-spacing:-0.02em}
-  .overlay p{font-size:14px;color:var(--dim);line-height:1.6;max-width:330px}
+  .overlay p{font-size:14px;color:var(--dim);line-height:1.6;max-width:340px}
   .overlay .big{font-size:54px}
   .overlay button{flex:none;width:100%;max-width:320px;padding:17px}
-  .hint{font-size:12px;color:var(--dim);max-width:330px;line-height:1.6}
+  .hint{font-size:12px;color:var(--dim);max-width:340px;line-height:1.6}
   .hint b{color:var(--warn)}
   .hidden{display:none!important}
-  .toast{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);z-index:20;
-    background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:10px 16px;
-    border-radius:10px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+
+  /* Calibració */
+  .calbox{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:28px 24px;
+    max-width:360px;width:100%;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .calstep{font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--lean);font-weight:700}
+  .calbox h2{font-size:21px;font-weight:800;letter-spacing:-0.02em}
+  .calbox .icon{font-size:46px;line-height:1}
+  .calbox .desc{font-size:14px;color:var(--dim);line-height:1.55}
+  .bar{width:100%;height:8px;background:var(--line);border-radius:6px;overflow:hidden}
+  .bar > i{display:block;height:100%;width:0;background:var(--lean);transition:width .12s linear}
+  .calrow{display:flex;gap:10px;width:100%}
+  .calrow button{padding:13px}
+
+  .toast{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);z-index:20;background:var(--panel);
+    border:1px solid var(--line);color:var(--ink);padding:10px 16px;border-radius:10px;font-size:13px;
+    opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw}
   .toast.show{opacity:1}
-  .recpill{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:4;
-    display:none;align-items:center;gap:7px;background:rgba(229,72,77,.15);
-    border:1px solid var(--bad);color:#fff;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600}
+  .recpill{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:4;display:none;
+    align-items:center;gap:7px;background:rgba(229,72,77,.15);border:1px solid var(--bad);color:#fff;
+    padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600}
   .recpill.on{display:flex}
   .recpill .rd{width:8px;height:8px;border-radius:50%;background:var(--bad);animation:blink 1s infinite}
   @keyframes blink{50%{opacity:.2}}
@@ -111,45 +100,57 @@
 </head>
 <body>
 
-<!-- Overlay d'inici -->
+<!-- Inici -->
 <div class="overlay" id="startScreen">
   <div class="big">🏍️</div>
   <h1>Inclinòmetre Moto</h1>
-  <p>Mesura quant inclines a les corbes fent servir el GPS i els sensors del telèfon. Cap hardware extra.</p>
+  <p>Mesura quant inclines a les corbes amb el GPS i el giroscopi del telèfon. Cap hardware extra.</p>
   <button class="primary" id="btnStart">Activar sensors</button>
-  <div class="hint">
-    Cal donar permís de <b>moviment</b> i <b>ubicació</b>.<br>
-    Munta el telèfon <b>rígid</b> a la moto. La inclinació es calcula amb la velocitat + el gir del GPS, així que necessita que <b>et moguis</b> per donar números fiables (a l'aturat marca 0°).
+  <div class="hint">Cal permís de <b>moviment</b> i <b>ubicació</b>. Munta el telèfon <b>rígid</b> a la moto i després prem <b>Calibrar</b> per ajustar la seva posició.</div>
+</div>
+
+<!-- Calibració -->
+<div class="overlay hidden" id="calScreen">
+  <div class="calbox">
+    <div class="calstep" id="calStep">Pas 1 de 2</div>
+    <div class="icon" id="calIcon">🅿️</div>
+    <h2 id="calTitle">Moto dreta i quieta</h2>
+    <div class="desc" id="calDesc">Posa la moto vertical sobre terreny pla i no la moguis. Capturant la referència…</div>
+    <div class="bar"><i id="calBar"></i></div>
+    <div class="calrow">
+      <button id="calCancel">Cancel·lar</button>
+      <button id="calNext" class="primary hidden">Següent</button>
+    </div>
   </div>
 </div>
 
-<!-- Barra superior -->
 <div class="topbar">
   <div class="brand"><b>LEAN</b><span>angle</span></div>
-  <div class="gps"><span class="dot" id="gpsDot"></span><span id="gpsTxt">Sense GPS</span></div>
+  <div class="topright">
+    <span class="mini" id="demoToggle">Demo</span>
+    <div class="gps"><span class="dot" id="gpsDot"></span><span id="gpsTxt">Sense GPS</span></div>
+  </div>
 </div>
 
-<!-- Escena central -->
 <div class="stage">
   <div class="recpill" id="recPill"><span class="rd"></span><span id="recTime">00:00</span></div>
   <div class="horizon-wrap"><canvas id="horizon" width="640" height="640"></canvas></div>
   <div class="readout">
     <div class="lean-num"><span id="leanVal">0</span><span class="deg">°</span></div>
     <div class="lean-side" id="leanSide">anivellat</div>
+    <div class="src gpsonly" id="srcTxt">font: <b>GPS</b> · sense calibrar</div>
   </div>
 </div>
 
-<!-- Dades -->
 <div class="grid">
   <div class="cell"><div class="v sp"><span id="spd">0</span></div><div class="k">Velocitat <span class="u">km/h</span></div></div>
   <div class="cell"><div class="v mx"><span id="maxL">0</span>°</div><div class="k">Màx esq.</div></div>
   <div class="cell"><div class="v mx"><span id="maxR">0</span>°</div><div class="k">Màx dreta</div></div>
 </div>
 
-<!-- Controls -->
 <div class="controls">
+  <button id="btnCal">Calibrar<span class="sub" id="calSub">posició mòbil</span></button>
   <button id="btnRec" disabled>Gravar ruta<span class="sub" id="recSub">0 punts</span></button>
-  <button id="btnDemo">Mode demo<span class="sub">provar sense moto</span></button>
   <button id="btnExport" disabled>Exportar<span class="sub">GPX + CSV</span></button>
 </div>
 
@@ -157,254 +158,309 @@
 
 <script>
 "use strict";
-const G = 9.81;
-const $ = id => document.getElementById(id);
+const G = 9.81, RAD = Math.PI/180, $ = id => document.getElementById(id);
 
-// ---- Estat ----
-let running = false, demo = false, recording = false;
+// ---- vectors 3D ----
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+const scl=(a,s)=>[a[0]*s,a[1]*s,a[2]*s];
+const len=a=>Math.sqrt(dot(a,a));
+const unit=a=>{const m=len(a)||1;return [a[0]/m,a[1]/m,a[2]/m];};
+
+// ---- estat ----
+let running=false, demo=false, recording=false, calibrated=false;
 let lastLat=null,lastLon=null,lastHeading=null,lastFixT=null;
-let leanTarget=0, leanShown=0;      // graus; + = dreta, - = esquerra
 let speedMps=0;
-let maxLeft=0, maxRight=0;
-let track=[], recStart=0;
+let leanGps=0;          // referència absoluta (GPS), graus, + = dreta
+let leanFused=0;        // valor mostrat (gir + GPS)
+let leanShown=0;
+let maxLeft=0,maxRight=0;
+let track=[], recStart=0, recTimer=null;
 let wakeLock=null;
+let lastMotionT=null;
 
-// ---- Permisos i arrencada ----
+// ---- calibració ----
+let gravRef=[0,0,1];    // "vertical" en eixos del telèfon (unitari)
+let gyroBias=[0,0,0];   // deg/s
+let rollAxis=[1,0,0];   // eix de roll de la moto en eixos del telèfon
+let rollSign=1;
+// auto-detecció del signe de roll comparant amb el GPS
+let signCorr=0, signLocked=false, rollAccum=0, prevLeanGps=0, signFixes=0;
+
+// captura de calibració
+let cal=null;
+const CAL1_MS=2600, CAL2_MS=6000, CAL2_TARGET=900;
+
+// ===== arrencada =====
 $("btnStart").addEventListener("click", async ()=>{
   try{
-    // iOS: cal demanar permís de moviment dins d'un gest de l'usuari
     if(typeof DeviceMotionEvent!=="undefined" && typeof DeviceMotionEvent.requestPermission==="function"){
-      const r = await DeviceMotionEvent.requestPermission();
-      if(r!=="granted"){ toast("Permís de moviment denegat"); }
+      const r=await DeviceMotionEvent.requestPermission();
+      if(r!=="granted") toast("Permís de moviment denegat");
     }
     if(typeof DeviceOrientationEvent!=="undefined" && typeof DeviceOrientationEvent.requestPermission==="function"){
-      try{ await DeviceOrientationEvent.requestPermission(); }catch(e){}
+      try{await DeviceOrientationEvent.requestPermission();}catch(e){}
     }
-    startGPS();
     window.addEventListener("devicemotion", onMotion, true);
-    requestWakeLock();
-    running = true;
-    $("startScreen").classList.add("hidden");
-    $("btnRec").disabled = false;
-  }catch(e){
-    toast("Error activant sensors: "+e.message);
-  }
+    startGPS(); requestWakeLock();
+    running=true; $("startScreen").classList.add("hidden"); $("btnRec").disabled=false;
+  }catch(e){ toast("Error activant sensors: "+e.message); }
 });
 
-// ---- GPS ----
+// ===== GPS =====
 function startGPS(){
-  if(!("geolocation" in navigator)){ setGps("bad","Sense GPS"); toast("Aquest navegador no té geolocalització"); return; }
+  if(!("geolocation" in navigator)){ setGps("bad","Sense GPS"); toast("Sense geolocalització"); return; }
   setGps("search","Cercant satèl·lits…");
-  navigator.geolocation.watchPosition(onFix, onGpsErr, {
-    enableHighAccuracy:true, maximumAge:0, timeout:15000
-  });
+  navigator.geolocation.watchPosition(onFix,onGpsErr,{enableHighAccuracy:true,maximumAge:0,timeout:15000});
 }
-function onGpsErr(err){
-  setGps("bad","GPS error");
-  if(err.code===1) toast("Permís d'ubicació denegat. Cal HTTPS.");
-}
+function onGpsErr(err){ setGps("bad","GPS error"); if(err.code===1) toast("Permís d'ubicació denegat. Cal HTTPS."); }
 function onFix(pos){
   if(demo) return;
-  const c = pos.coords;
-  const now = pos.timestamp || Date.now();
-  setGps("live", "GPS · "+(c.accuracy?Math.round(c.accuracy)+"m":"ok"));
+  const c=pos.coords, now=pos.timestamp||Date.now();
+  setGps("live","GPS · "+(c.accuracy?Math.round(c.accuracy)+"m":"ok"));
+  if(c.speed!=null && !isNaN(c.speed)) speedMps=c.speed;
 
-  speedMps = (c.speed!=null && !isNaN(c.speed)) ? c.speed : speedMps;
+  let heading=(c.heading!=null && !isNaN(c.heading))?c.heading:null;
+  if(heading==null && lastLat!=null) heading=bearing(lastLat,lastLon,c.latitude,c.longitude);
 
-  // Rumb: del GPS si n'hi ha; si no, el calculem entre fixos
-  let heading = (c.heading!=null && !isNaN(c.heading)) ? c.heading : null;
-  if(heading==null && lastLat!=null){
-    heading = bearing(lastLat,lastLon,c.latitude,c.longitude);
-  }
-
-  // ω_yaw = variació de rumb / temps  →  a_lat = v·ω_yaw  →  lean = atan(a_lat/g)
   if(heading!=null && lastHeading!=null && lastFixT!=null){
-    const dt = (now-lastFixT)/1000;
+    const dt=(now-lastFixT)/1000;
     if(dt>0.05){
-      let dpsi = heading-lastHeading;
-      while(dpsi>180) dpsi-=360;
-      while(dpsi<-180) dpsi+=360;
-      const yawRate = (dpsi*Math.PI/180)/dt;     // rad/s
-      const aLat = speedMps * yawRate;            // m/s²  (+ = gira a la dreta)
-      // a baixa velocitat el rumb és soroll pur: ignora per sota de ~8 km/h
-      if(speedMps > 2.2){
-        leanTarget = Math.atan2(aLat, G) * 180/Math.PI;
-      } else {
-        leanTarget = 0;
-      }
+      let d=heading-lastHeading; while(d>180)d-=360; while(d<-180)d+=360;
+      const yaw=(d*RAD)/dt, aLat=speedMps*yaw;
+      leanGps = speedMps>2.2 ? Math.atan2(aLat,G)/RAD : 0;
     }
   }
   lastLat=c.latitude; lastLon=c.longitude; lastHeading=heading; lastFixT=now;
 
-  if(recording){
-    track.push({t:now, lat:c.latitude, lon:c.longitude,
-                spd:speedMps, head:heading||0, lean:leanTarget});
-    $("recSub").textContent = track.length+" punts";
+  // auto-signe del roll: el gir integrat ha de coincidir amb el canvi de lean del GPS
+  if(calibrated && !signLocked){
+    const dG=leanGps-prevLeanGps;
+    if(Math.abs(dG)>1.5 && Math.abs(rollAccum)>1.5){
+      signCorr += dG*rollAccum; signFixes++;
+      if(signFixes>=6){ if(signCorr<0) rollSign*=-1; signLocked=true; }
+    }
+    rollAccum=0; prevLeanGps=leanGps;
   }
 }
 
-// ---- Moviment (giroscopi/acceleròmetre): de moment només per suavitzar visualment ----
-let gyroRoll=0;
+// ===== moviment (giroscopi + acceleròmetre) =====
 function onMotion(e){
-  if(e.rotationRate){
-    // No sabem encara quin eix és el "roll" segons el muntatge → v1 només l'ensenya viu.
-    gyroRoll = e.rotationRate.beta || 0;
+  const now=performance.now();
+  const dt = e.interval ? e.interval : (lastMotionT?(now-lastMotionT):16);
+  lastMotionT=now;
+  const dts=Math.min(dt/1000,0.1);
+
+  const rr=e.rotationRate||{}, ag=e.accelerationIncludingGravity||{};
+  // ω en eixos del dispositiu [x,y,z] = [beta,gamma,alpha] (deg/s)
+  const w=[rr.beta||0, rr.gamma||0, rr.alpha||0];
+  const acc=[ag.x||0, ag.y||0, ag.z||0];
+
+  // --- en calibració ---
+  if(cal){
+    if(cal.step===1){
+      cal.gSum=[cal.gSum[0]+acc[0],cal.gSum[1]+acc[1],cal.gSum[2]+acc[2]];
+      cal.bSum=[cal.bSum[0]+w[0],cal.bSum[1]+w[1],cal.bSum[2]+w[2]]; cal.n++;
+    } else if(cal.step===2){
+      const wb=sub(w,gyroBias);                       // treu bias
+      const wh=sub(wb, scl(gravRef,dot(wb,gravRef)));  // component horitzontal (= roll pur)
+      const m=len(wh);
+      if(m>8){ // ignora soroll/quietud
+        if(!cal.seed) cal.seed=unit(wh);
+        const s=dot(wh,cal.seed)>=0?1:-1;
+        cal.acc=[cal.acc[0]+wh[0]*s,cal.acc[1]+wh[1]*s,cal.acc[2]+wh[2]*s];
+        cal.weight+=m;
+      }
+    }
+    return;
   }
+
+  if(!calibrated || demo) return;
+
+  // --- fusió en marxa ---
+  const wb=sub(w,gyroBias);
+  let rollRate=rollSign*dot(wb,rollAxis);            // deg/s al voltant de l'eix de marxa
+  leanFused += rollRate*dts;                          // giroscopi: dinàmica ràpida
+  rollAccum += rollRate*dts;                          // per a l'auto-signe
+  // correcció lenta cap a la referència GPS (evita deriva)
+  const k = speedMps>2.2 ? 0.35 : 1.4;
+  leanFused += k*(leanGps-leanFused)*dts;
+  if(leanFused>60)leanFused=60; if(leanFused<-60)leanFused=-60;
 }
 
-// ---- Bucle de render ----
+// ===== calibració: control =====
+$("btnCal").addEventListener("click", startCal);
+$("calCancel").addEventListener("click", ()=>{ cal=null; $("calScreen").classList.add("hidden"); });
+$("calNext").addEventListener("click", ()=> calStep2());
+
+function startCal(){
+  if(!running && !demo){ toast("Activa primer els sensors"); return; }
+  if(demo){ toast("Surt del mode demo per calibrar"); return; }
+  cal={step:1,t0:performance.now(),n:0,gSum:[0,0,0],bSum:[0,0,0],acc:[0,0,0],weight:0,seed:null};
+  $("calScreen").classList.remove("hidden");
+  $("calStep").textContent="Pas 1 de 2";
+  $("calIcon").textContent="🅿️";
+  $("calTitle").textContent="Moto dreta i quieta";
+  $("calDesc").textContent="Posa la moto vertical sobre terreny pla i no la moguis. Capturant la referència…";
+  $("calNext").classList.add("hidden");
+  tickCal();
+}
+function tickCal(){
+  if(!cal) return;
+  const el=performance.now()-cal.t0;
+  if(cal.step===1){
+    $("calBar").style.width=Math.min(el/CAL1_MS*100,100)+"%";
+    if(el>=CAL1_MS){
+      if(cal.n>3){ gravRef=unit(scl(cal.gSum,1/cal.n)); gyroBias=scl(cal.bSum,1/cal.n); }
+      // passa al pas 2 (manual amb botó perquè l'usuari es prepari)
+      $("calStep").textContent="Pas 2 de 2";
+      $("calIcon").textContent="↔️";
+      $("calTitle").textContent="Bressola la moto";
+      $("calDesc").textContent="Inclina-la a poc a poc cap a un costat i cap a l'altre, com a una corba, fins que la barra s'ompli. Prem Següent quan estiguis a punt.";
+      $("calBar").style.width="0%";
+      $("calNext").classList.remove("hidden");
+      cal.step="wait";
+      return;
+    }
+  } else if(cal.step===2){
+    $("calBar").style.width=Math.min(cal.weight/CAL2_TARGET*100,100)+"%";
+    if(cal.weight>=CAL2_TARGET || el-cal.t2>=CAL2_MS){ finishCal(); return; }
+  }
+  requestAnimationFrame(tickCal);
+}
+function calStep2(){
+  $("calNext").classList.add("hidden");
+  cal.step=2; cal.t0=performance.now(); cal.t2=0; cal.acc=[0,0,0]; cal.weight=0; cal.seed=null;
+  tickCal();
+}
+function finishCal(){
+  const ok = cal.weight>CAL2_TARGET*0.4 && len(cal.acc)>0;
+  if(ok){
+    rollAxis=unit(cal.acc);
+    calibrated=true; signLocked=false; signCorr=0; signFixes=0; rollSign=1; rollAccum=0; prevLeanGps=leanGps;
+    leanFused=leanGps;
+    $("calSub").textContent="✓ calibrat"; $("btnCal").classList.add("ok");
+    $("srcTxt").classList.remove("gpsonly"); $("srcTxt").innerHTML='font: <b>giroscopi + GPS</b>';
+    toast("Calibrat ✓ — fusió activa");
+  } else {
+    toast("Poc moviment detectat, torna-ho a provar");
+  }
+  cal=null; $("calScreen").classList.add("hidden");
+}
+
+// ===== bucle de render =====
 function loop(){
   if(demo){
-    const t = Date.now()/1000;
-    leanTarget = Math.sin(t*0.6)*38 + Math.sin(t*1.7)*6;
-    speedMps = 14 + Math.sin(t*0.3)*6;
+    const t=Date.now()/1000;
+    leanFused=Math.sin(t*0.6)*38+Math.sin(t*1.7)*6;
+    speedMps=14+Math.sin(t*0.3)*6;
+  } else if(!calibrated){
+    leanFused += (leanGps-leanFused)*0.12;  // sense calibrar: només GPS, suavitzat
   }
-  // suavitzat (filtre passa-baixos cap al target)
-  leanShown += (leanTarget-leanShown)*0.18;
+  leanShown += (leanFused-leanShown)*0.35;
 
-  const a = Math.round(Math.abs(leanShown));
-  $("leanVal").textContent = a;
-  const side = leanShown>1.5 ? "dreta" : leanShown<-1.5 ? "esquerra" : "anivellat";
-  $("leanSide").textContent = side==="anivellat" ? "anivellat" : "inclinant a "+side;
-  $("spd").textContent = Math.round(speedMps*3.6);
-
-  if(leanShown>maxRight){maxRight=leanShown; $("maxR").textContent=Math.round(maxRight);}
-  if(-leanShown>maxLeft){maxLeft=-leanShown; $("maxL").textContent=Math.round(maxLeft);}
+  $("leanVal").textContent=Math.round(Math.abs(leanShown));
+  const side=leanShown>1.5?"dreta":leanShown<-1.5?"esquerra":"anivellat";
+  $("leanSide").textContent=side==="anivellat"?"anivellat":"inclinant a "+side;
+  $("spd").textContent=Math.round(speedMps*3.6);
+  if(leanShown>maxRight){maxRight=leanShown;$("maxR").textContent=Math.round(maxRight);}
+  if(-leanShown>maxLeft){maxLeft=-leanShown;$("maxL").textContent=Math.round(maxLeft);}
 
   drawHorizon(leanShown);
-  if(recording){
-    const s = Math.floor((Date.now()-recStart)/1000);
-    $("recTime").textContent = String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
-  }
+  if(recording){const s=Math.floor((Date.now()-recStart)/1000);
+    $("recTime").textContent=String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");}
   requestAnimationFrame(loop);
 }
 
-// ---- Dibuix de l'horitzó artificial (signatura) ----
-const cv = $("horizon"), ctx = cv.getContext("2d");
+// ===== horitzó artificial =====
+const cv=$("horizon"), ctx=cv.getContext("2d");
 function drawHorizon(lean){
   const w=cv.width,h=cv.height,cx=w/2,cy=h/2,R=w*0.46;
   ctx.clearRect(0,0,w,h);
   ctx.save();
-  // disc retallat
   ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.clip();
-  // el món gira al revés de la moto
-  ctx.translate(cx,cy);ctx.rotate(-lean*Math.PI/180);
-  // cel
-  const sky=ctx.createLinearGradient(0,-R,0,0);
-  sky.addColorStop(0,"#13202b");sky.addColorStop(1,"#1d3340");
+  ctx.translate(cx,cy);ctx.rotate(-lean*RAD);
+  const sky=ctx.createLinearGradient(0,-R,0,0);sky.addColorStop(0,"#13202b");sky.addColorStop(1,"#1d3340");
   ctx.fillStyle=sky;ctx.fillRect(-R*1.6,-R*1.6,R*3.2,R*1.6);
-  // terra
-  const gnd=ctx.createLinearGradient(0,0,0,R);
-  gnd.addColorStop(0,"#2a1c12");gnd.addColorStop(1,"#160f09");
+  const gnd=ctx.createLinearGradient(0,0,0,R);gnd.addColorStop(0,"#2a1c12");gnd.addColorStop(1,"#160f09");
   ctx.fillStyle=gnd;ctx.fillRect(-R*1.6,0,R*3.2,R*1.6);
-  // línia d'horitzó
   ctx.strokeStyle="rgba(232,238,244,.55)";ctx.lineWidth=3;
   ctx.beginPath();ctx.moveTo(-R*1.6,0);ctx.lineTo(R*1.6,0);ctx.stroke();
-  // marques de grau cada 10°
   ctx.strokeStyle="rgba(232,238,244,.18)";ctx.lineWidth=2;
-  for(let d=-45;d<=45;d+=15){if(d===0)continue;const y=-(d/45)*R*0.5;
-    const len=R*0.12;ctx.beginPath();ctx.moveTo(-len,y);ctx.lineTo(len,y);ctx.stroke();}
+  for(let d=-45;d<=45;d+=15){if(d===0)continue;const y=-(d/45)*R*0.5,l=R*0.12;
+    ctx.beginPath();ctx.moveTo(-l,y);ctx.lineTo(l,y);ctx.stroke();}
   ctx.restore();
-
-  // anell
-  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);
-  ctx.strokeStyle="#252C36";ctx.lineWidth=6;ctx.stroke();
-
-  // escala fixa d'inclinació a dalt (graduació cada 10°)
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.strokeStyle="#252C36";ctx.lineWidth=6;ctx.stroke();
   ctx.save();ctx.translate(cx,cy);
-  for(let d=-50;d<=50;d+=10){
-    const ang=(-90+d)*Math.PI/180;
-    const r1=R, r2=R-(d%30===0?22:13);
-    ctx.strokeStyle = d===0?"#FF6B2C":"rgba(133,149,166,.6)";
-    ctx.lineWidth = d===0?4:2;
-    ctx.beginPath();
-    ctx.moveTo(Math.cos(ang)*r1,Math.sin(ang)*r1);
-    ctx.lineTo(Math.cos(ang)*r2,Math.sin(ang)*r2);
-    ctx.stroke();
-  }
-  // punter (la moto): fix a dalt, indica la inclinació actual sobre l'escala
-  const pa=(-90+lean)*Math.PI/180;
-  ctx.fillStyle="#FF6B2C";
-  ctx.beginPath();
+  for(let d=-50;d<=50;d+=10){const a=(-90+d)*RAD,r1=R,r2=R-(d%30===0?22:13);
+    ctx.strokeStyle=d===0?"#FF6B2C":"rgba(133,149,166,.6)";ctx.lineWidth=d===0?4:2;
+    ctx.beginPath();ctx.moveTo(Math.cos(a)*r1,Math.sin(a)*r1);ctx.lineTo(Math.cos(a)*r2,Math.sin(a)*r2);ctx.stroke();}
+  const pa=(-90+lean)*RAD;ctx.fillStyle="#FF6B2C";ctx.beginPath();
   ctx.moveTo(Math.cos(pa)*(R-26),Math.sin(pa)*(R-26));
   ctx.lineTo(Math.cos(pa+0.035)*(R-44),Math.sin(pa+0.035)*(R-44));
   ctx.lineTo(Math.cos(pa-0.035)*(R-44),Math.sin(pa-0.035)*(R-44));
-  ctx.closePath();ctx.fill();
-  ctx.restore();
+  ctx.closePath();ctx.fill();ctx.restore();
 }
 
-// ---- Gravació ----
+// ===== gravació a 200 ms =====
 $("btnRec").addEventListener("click", ()=>{
-  recording = !recording;
-  const b=$("btnRec");
+  recording=!recording; const b=$("btnRec");
   if(recording){
-    track=[]; recStart=Date.now(); maxLeft=0; maxRight=0;
-    $("maxL").textContent="0"; $("maxR").textContent="0";
-    b.classList.add("rec"); b.firstChild.textContent="Aturar";
-    $("recPill").classList.add("on"); $("btnExport").disabled=true;
-    toast("Gravant ruta");
+    track=[]; recStart=Date.now(); maxLeft=0; maxRight=0; $("maxL").textContent="0"; $("maxR").textContent="0";
+    b.classList.add("rec"); b.firstChild.textContent="Aturar"; $("recPill").classList.add("on"); $("btnExport").disabled=true;
+    recTimer=setInterval(recordSample,200);
+    toast("Gravant a 5 punts/s");
   }else{
-    b.classList.remove("rec"); b.firstChild.textContent="Gravar ruta";
-    $("recPill").classList.remove("on");
-    $("btnExport").disabled = track.length===0;
-    toast(track.length+" punts gravats");
+    clearInterval(recTimer); recTimer=null;
+    b.classList.remove("rec"); b.firstChild.textContent="Gravar ruta"; $("recPill").classList.remove("on");
+    $("btnExport").disabled=track.length===0; toast(track.length+" punts gravats");
   }
 });
+function recordSample(){
+  let lat=lastLat, lon=lastLon;
+  if(demo){ // posició sintètica perquè es pugui provar l'exportació
+    const t=Date.now()/1000; lat=41.387+Math.sin(t*0.05)*0.01; lon=2.17+Math.cos(t*0.05)*0.01;
+  }
+  if(lat==null||lon==null) return;
+  track.push({t:Date.now(),lat,lon,spd:speedMps,head:lastHeading||0,lean:leanFused});
+  $("recSub").textContent=track.length+" punts";
+}
 
-// ---- Demo ----
-$("btnDemo").addEventListener("click", ()=>{
-  demo=!demo;
-  $("btnDemo").classList.toggle("primary",demo);
+// ===== demo =====
+$("demoToggle").addEventListener("click", ()=>{
+  demo=!demo; $("demoToggle").classList.toggle("on",demo);
   if(demo){ setGps("live","DEMO"); if(!running){$("startScreen").classList.add("hidden");$("btnRec").disabled=false;running=true;} }
-  else { setGps("search","Cercant satèl·lits…"); }
+  else setGps("search","Cercant satèl·lits…");
 });
 
-// ---- Exportar GPX + CSV ----
+// ===== exportar =====
 $("btnExport").addEventListener("click", ()=>{
   if(!track.length){ toast("No hi ha res per exportar"); return; }
-  const stamp = new Date().toISOString().replace(/[:.]/g,"-").slice(0,19);
-  download("ruta-"+stamp+".csv", toCSV(track), "text/csv");
-  download("ruta-"+stamp+".gpx", toGPX(track), "application/gpx+xml");
+  const s=new Date().toISOString().replace(/[:.]/g,"-").slice(0,19);
+  download("ruta-"+s+".csv",toCSV(track),"text/csv");
+  download("ruta-"+s+".gpx",toGPX(track),"application/gpx+xml");
   toast("Fitxers descarregats");
 });
-function toCSV(t){
-  let s="timestamp,lat,lon,speed_kmh,heading,lean_deg\n";
-  for(const p of t) s+=`${new Date(p.t).toISOString()},${p.lat.toFixed(6)},${p.lon.toFixed(6)},${(p.spd*3.6).toFixed(1)},${p.head.toFixed(1)},${p.lean.toFixed(1)}\n`;
-  return s;
-}
-function toGPX(t){
-  let s=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Inclinometre Moto" xmlns="http://www.topografix.com/GPX/1/1">\n<trk><name>Ruta moto</name><trkseg>\n`;
-  for(const p of t) s+=`<trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}"><time>${new Date(p.t).toISOString()}</time><extensions><lean>${p.lean.toFixed(1)}</lean><speed>${p.spd.toFixed(2)}</speed></extensions></trkpt>\n`;
-  s+=`</trkseg></trk></gpx>`;return s;
-}
-function download(name,content,type){
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([content],{type}));
-  a.download=name;a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
-}
+function toCSV(t){let s="timestamp,lat,lon,speed_kmh,heading,lean_deg\n";
+  for(const p of t)s+=`${new Date(p.t).toISOString()},${p.lat.toFixed(6)},${p.lon.toFixed(6)},${(p.spd*3.6).toFixed(1)},${p.head.toFixed(1)},${p.lean.toFixed(1)}\n`;return s;}
+function toGPX(t){let s=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Inclinometre Moto" xmlns="http://www.topografix.com/GPX/1/1">\n<trk><name>Ruta moto</name><trkseg>\n`;
+  for(const p of t)s+=`<trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}"><time>${new Date(p.t).toISOString()}</time><extensions><lean>${p.lean.toFixed(1)}</lean><speed>${p.spd.toFixed(2)}</speed></extensions></trkpt>\n`;
+  s+=`</trkseg></trk></gpx>`;return s;}
+function download(name,content,type){const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
 
-// ---- Utils ----
-function bearing(la1,lo1,la2,lo2){
-  const r=Math.PI/180,φ1=la1*r,φ2=la2*r,Δλ=(lo2-lo1)*r;
-  const y=Math.sin(Δλ)*Math.cos(φ2);
-  const x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
-  return (Math.atan2(y,x)*180/Math.PI+360)%360;
-}
-function setGps(state,txt){
-  const d=$("gpsDot");d.className="dot"+(state==="live"?" live":state==="search"?" search":"");
-  $("gpsTxt").textContent=txt;
-}
-let toastT;
-function toast(m){const el=$("toast");el.textContent=m;el.classList.add("show");
-  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2200);}
-async function requestWakeLock(){
-  try{ if("wakeLock" in navigator){ wakeLock=await navigator.wakeLock.request("screen");
-    document.addEventListener("visibilitychange",async()=>{
-      if(wakeLock!==null && document.visibilityState==="visible"){
-        try{wakeLock=await navigator.wakeLock.request("screen");}catch(e){}}
-    });}}catch(e){}
-}
+// ===== utils =====
+function bearing(la1,lo1,la2,lo2){const φ1=la1*RAD,φ2=la2*RAD,Δλ=(lo2-lo1)*RAD;
+  const y=Math.sin(Δλ)*Math.cos(φ2),x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+  return (Math.atan2(y,x)/RAD+360)%360;}
+function setGps(state,txt){const d=$("gpsDot");
+  d.className="dot"+(state==="live"?" live":state==="search"?" search":"");$("gpsTxt").textContent=txt;}
+let toastT;function toast(m){const el=$("toast");el.textContent=m;el.classList.add("show");
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2400);}
+async function requestWakeLock(){try{if("wakeLock" in navigator){wakeLock=await navigator.wakeLock.request("screen");
+  document.addEventListener("visibilitychange",async()=>{if(wakeLock!==null&&document.visibilityState==="visible"){
+    try{wakeLock=await navigator.wakeLock.request("screen");}catch(e){}}});}}catch(e){}}
 
 loop();
 </script>
