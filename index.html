@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0E1116">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Inclinòmetre Moto</title>
+<style>
+  :root{
+    --bg:#0E1116;
+    --panel:#161B22;
+    --line:#252C36;
+    --ink:#E8EEF4;
+    --dim:#8595A6;
+    --lean:#FF6B2C;     /* àmbar inclinació */
+    --speed:#3FE0D0;    /* cian velocitat */
+    --warn:#F2C14E;
+    --bad:#E5484D;
+    --good:#4ED27A;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-variant-numeric:tabular-nums;
+    overflow:hidden;
+    display:flex;flex-direction:column;
+    height:100dvh;
+    user-select:none;-webkit-user-select:none;
+  }
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px calc(14px + env(safe-area-inset-top)) 18px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex;align-items:baseline;gap:8px}
+  .brand b{font-weight:800;letter-spacing:-0.02em;font-size:17px}
+  .brand span{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:0.14em}
+  .gps{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--dim)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--bad);box-shadow:0 0 0 0 rgba(229,72,77,.5)}
+  .dot.live{background:var(--good)}
+  .dot.search{background:var(--warn);animation:pulse 1.2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(242,193,78,.5)}70%{box-shadow:0 0 0 8px rgba(242,193,78,0)}100%{box-shadow:0 0 0 0 rgba(242,193,78,0)}}
+
+  /* ---- HORITZÓ (element signatura) ---- */
+  .stage{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .horizon-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  #horizon{display:block}
+  .readout{
+    position:relative;z-index:3;text-align:center;pointer-events:none;
+  }
+  .lean-num{
+    font-size:clamp(80px,30vw,150px);font-weight:800;line-height:.9;
+    letter-spacing:-0.04em;color:var(--lean);
+    text-shadow:0 2px 30px rgba(255,107,44,.25);
+  }
+  .lean-num .deg{font-size:.4em;vertical-align:super;color:var(--dim);font-weight:600;margin-left:2px}
+  .lean-side{font-size:13px;text-transform:uppercase;letter-spacing:0.28em;color:var(--dim);margin-top:4px}
+
+  /* ---- DADES INFERIORS ---- */
+  .grid{
+    display:grid;grid-template-columns:repeat(3,1fr);
+    border-top:1px solid var(--line);
+  }
+  .cell{padding:14px 10px;text-align:center;border-right:1px solid var(--line)}
+  .cell:last-child{border-right:none}
+  .cell .v{font-size:26px;font-weight:700;letter-spacing:-0.02em}
+  .cell .v.sp{color:var(--speed)}
+  .cell .v.mx{color:var(--lean)}
+  .cell .k{font-size:10px;text-transform:uppercase;letter-spacing:0.16em;color:var(--dim);margin-top:3px}
+  .cell .u{font-size:13px;color:var(--dim);font-weight:500}
+
+  /* ---- CONTROLS ---- */
+  .controls{display:flex;gap:10px;padding:12px 14px calc(14px + env(safe-area-inset-bottom)) 14px;border-top:1px solid var(--line)}
+  button{
+    flex:1;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+    font-size:15px;font-weight:600;padding:15px 10px;border-radius:13px;cursor:pointer;
+    font-family:inherit;transition:transform .06s,background .15s,border-color .15s;
+  }
+  button:active{transform:scale(.97)}
+  button.primary{background:var(--lean);border-color:var(--lean);color:#1a0d04}
+  button.rec{background:var(--bad);border-color:var(--bad);color:#fff}
+  button:disabled{opacity:.4;cursor:default}
+  button .sub{display:block;font-size:10px;font-weight:500;opacity:.7;margin-top:2px;text-transform:uppercase;letter-spacing:0.1em}
+
+  /* ---- OVERLAY INICI / AVISOS ---- */
+  .overlay{position:absolute;inset:0;z-index:10;background:var(--bg);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;padding:32px;text-align:center;gap:18px}
+  .overlay h1{font-size:24px;font-weight:800;letter-spacing:-0.02em}
+  .overlay p{font-size:14px;color:var(--dim);line-height:1.6;max-width:330px}
+  .overlay .big{font-size:54px}
+  .overlay button{flex:none;width:100%;max-width:320px;padding:17px}
+  .hint{font-size:12px;color:var(--dim);max-width:330px;line-height:1.6}
+  .hint b{color:var(--warn)}
+  .hidden{display:none!important}
+  .toast{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);z-index:20;
+    background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:10px 16px;
+    border-radius:10px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+  .toast.show{opacity:1}
+  .recpill{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:4;
+    display:none;align-items:center;gap:7px;background:rgba(229,72,77,.15);
+    border:1px solid var(--bad);color:#fff;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600}
+  .recpill.on{display:flex}
+  .recpill .rd{width:8px;height:8px;border-radius:50%;background:var(--bad);animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.2}}
+</style>
+</head>
+<body>
+
+<!-- Overlay d'inici -->
+<div class="overlay" id="startScreen">
+  <div class="big">🏍️</div>
+  <h1>Inclinòmetre Moto</h1>
+  <p>Mesura quant inclines a les corbes fent servir el GPS i els sensors del telèfon. Cap hardware extra.</p>
+  <button class="primary" id="btnStart">Activar sensors</button>
+  <div class="hint">
+    Cal donar permís de <b>moviment</b> i <b>ubicació</b>.<br>
+    Munta el telèfon <b>rígid</b> a la moto. La inclinació es calcula amb la velocitat + el gir del GPS, així que necessita que <b>et moguis</b> per donar números fiables (a l'aturat marca 0°).
+  </div>
+</div>
+
+<!-- Barra superior -->
+<div class="topbar">
+  <div class="brand"><b>LEAN</b><span>angle</span></div>
+  <div class="gps"><span class="dot" id="gpsDot"></span><span id="gpsTxt">Sense GPS</span></div>
+</div>
+
+<!-- Escena central -->
+<div class="stage">
+  <div class="recpill" id="recPill"><span class="rd"></span><span id="recTime">00:00</span></div>
+  <div class="horizon-wrap"><canvas id="horizon" width="640" height="640"></canvas></div>
+  <div class="readout">
+    <div class="lean-num"><span id="leanVal">0</span><span class="deg">°</span></div>
+    <div class="lean-side" id="leanSide">anivellat</div>
+  </div>
+</div>
+
+<!-- Dades -->
+<div class="grid">
+  <div class="cell"><div class="v sp"><span id="spd">0</span></div><div class="k">Velocitat <span class="u">km/h</span></div></div>
+  <div class="cell"><div class="v mx"><span id="maxL">0</span>°</div><div class="k">Màx esq.</div></div>
+  <div class="cell"><div class="v mx"><span id="maxR">0</span>°</div><div class="k">Màx dreta</div></div>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <button id="btnRec" disabled>Gravar ruta<span class="sub" id="recSub">0 punts</span></button>
+  <button id="btnDemo">Mode demo<span class="sub">provar sense moto</span></button>
+  <button id="btnExport" disabled>Exportar<span class="sub">GPX + CSV</span></button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const G = 9.81;
+const $ = id => document.getElementById(id);
+
+// ---- Estat ----
+let running = false, demo = false, recording = false;
+let lastLat=null,lastLon=null,lastHeading=null,lastFixT=null;
+let leanTarget=0, leanShown=0;      // graus; + = dreta, - = esquerra
+let speedMps=0;
+let maxLeft=0, maxRight=0;
+let track=[], recStart=0;
+let wakeLock=null;
+
+// ---- Permisos i arrencada ----
+$("btnStart").addEventListener("click", async ()=>{
+  try{
+    // iOS: cal demanar permís de moviment dins d'un gest de l'usuari
+    if(typeof DeviceMotionEvent!=="undefined" && typeof DeviceMotionEvent.requestPermission==="function"){
+      const r = await DeviceMotionEvent.requestPermission();
+      if(r!=="granted"){ toast("Permís de moviment denegat"); }
+    }
+    if(typeof DeviceOrientationEvent!=="undefined" && typeof DeviceOrientationEvent.requestPermission==="function"){
+      try{ await DeviceOrientationEvent.requestPermission(); }catch(e){}
+    }
+    startGPS();
+    window.addEventListener("devicemotion", onMotion, true);
+    requestWakeLock();
+    running = true;
+    $("startScreen").classList.add("hidden");
+    $("btnRec").disabled = false;
+  }catch(e){
+    toast("Error activant sensors: "+e.message);
+  }
+});
+
+// ---- GPS ----
+function startGPS(){
+  if(!("geolocation" in navigator)){ setGps("bad","Sense GPS"); toast("Aquest navegador no té geolocalització"); return; }
+  setGps("search","Cercant satèl·lits…");
+  navigator.geolocation.watchPosition(onFix, onGpsErr, {
+    enableHighAccuracy:true, maximumAge:0, timeout:15000
+  });
+}
+function onGpsErr(err){
+  setGps("bad","GPS error");
+  if(err.code===1) toast("Permís d'ubicació denegat. Cal HTTPS.");
+}
+function onFix(pos){
+  if(demo) return;
+  const c = pos.coords;
+  const now = pos.timestamp || Date.now();
+  setGps("live", "GPS · "+(c.accuracy?Math.round(c.accuracy)+"m":"ok"));
+
+  speedMps = (c.speed!=null && !isNaN(c.speed)) ? c.speed : speedMps;
+
+  // Rumb: del GPS si n'hi ha; si no, el calculem entre fixos
+  let heading = (c.heading!=null && !isNaN(c.heading)) ? c.heading : null;
+  if(heading==null && lastLat!=null){
+    heading = bearing(lastLat,lastLon,c.latitude,c.longitude);
+  }
+
+  // ω_yaw = variació de rumb / temps  →  a_lat = v·ω_yaw  →  lean = atan(a_lat/g)
+  if(heading!=null && lastHeading!=null && lastFixT!=null){
+    const dt = (now-lastFixT)/1000;
+    if(dt>0.05){
+      let dpsi = heading-lastHeading;
+      while(dpsi>180) dpsi-=360;
+      while(dpsi<-180) dpsi+=360;
+      const yawRate = (dpsi*Math.PI/180)/dt;     // rad/s
+      const aLat = speedMps * yawRate;            // m/s²  (+ = gira a la dreta)
+      // a baixa velocitat el rumb és soroll pur: ignora per sota de ~8 km/h
+      if(speedMps > 2.2){
+        leanTarget = Math.atan2(aLat, G) * 180/Math.PI;
+      } else {
+        leanTarget = 0;
+      }
+    }
+  }
+  lastLat=c.latitude; lastLon=c.longitude; lastHeading=heading; lastFixT=now;
+
+  if(recording){
+    track.push({t:now, lat:c.latitude, lon:c.longitude,
+                spd:speedMps, head:heading||0, lean:leanTarget});
+    $("recSub").textContent = track.length+" punts";
+  }
+}
+
+// ---- Moviment (giroscopi/acceleròmetre): de moment només per suavitzar visualment ----
+let gyroRoll=0;
+function onMotion(e){
+  if(e.rotationRate){
+    // No sabem encara quin eix és el "roll" segons el muntatge → v1 només l'ensenya viu.
+    gyroRoll = e.rotationRate.beta || 0;
+  }
+}
+
+// ---- Bucle de render ----
+function loop(){
+  if(demo){
+    const t = Date.now()/1000;
+    leanTarget = Math.sin(t*0.6)*38 + Math.sin(t*1.7)*6;
+    speedMps = 14 + Math.sin(t*0.3)*6;
+  }
+  // suavitzat (filtre passa-baixos cap al target)
+  leanShown += (leanTarget-leanShown)*0.18;
+
+  const a = Math.round(Math.abs(leanShown));
+  $("leanVal").textContent = a;
+  const side = leanShown>1.5 ? "dreta" : leanShown<-1.5 ? "esquerra" : "anivellat";
+  $("leanSide").textContent = side==="anivellat" ? "anivellat" : "inclinant a "+side;
+  $("spd").textContent = Math.round(speedMps*3.6);
+
+  if(leanShown>maxRight){maxRight=leanShown; $("maxR").textContent=Math.round(maxRight);}
+  if(-leanShown>maxLeft){maxLeft=-leanShown; $("maxL").textContent=Math.round(maxLeft);}
+
+  drawHorizon(leanShown);
+  if(recording){
+    const s = Math.floor((Date.now()-recStart)/1000);
+    $("recTime").textContent = String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
+  }
+  requestAnimationFrame(loop);
+}
+
+// ---- Dibuix de l'horitzó artificial (signatura) ----
+const cv = $("horizon"), ctx = cv.getContext("2d");
+function drawHorizon(lean){
+  const w=cv.width,h=cv.height,cx=w/2,cy=h/2,R=w*0.46;
+  ctx.clearRect(0,0,w,h);
+  ctx.save();
+  // disc retallat
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.clip();
+  // el món gira al revés de la moto
+  ctx.translate(cx,cy);ctx.rotate(-lean*Math.PI/180);
+  // cel
+  const sky=ctx.createLinearGradient(0,-R,0,0);
+  sky.addColorStop(0,"#13202b");sky.addColorStop(1,"#1d3340");
+  ctx.fillStyle=sky;ctx.fillRect(-R*1.6,-R*1.6,R*3.2,R*1.6);
+  // terra
+  const gnd=ctx.createLinearGradient(0,0,0,R);
+  gnd.addColorStop(0,"#2a1c12");gnd.addColorStop(1,"#160f09");
+  ctx.fillStyle=gnd;ctx.fillRect(-R*1.6,0,R*3.2,R*1.6);
+  // línia d'horitzó
+  ctx.strokeStyle="rgba(232,238,244,.55)";ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(-R*1.6,0);ctx.lineTo(R*1.6,0);ctx.stroke();
+  // marques de grau cada 10°
+  ctx.strokeStyle="rgba(232,238,244,.18)";ctx.lineWidth=2;
+  for(let d=-45;d<=45;d+=15){if(d===0)continue;const y=-(d/45)*R*0.5;
+    const len=R*0.12;ctx.beginPath();ctx.moveTo(-len,y);ctx.lineTo(len,y);ctx.stroke();}
+  ctx.restore();
+
+  // anell
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);
+  ctx.strokeStyle="#252C36";ctx.lineWidth=6;ctx.stroke();
+
+  // escala fixa d'inclinació a dalt (graduació cada 10°)
+  ctx.save();ctx.translate(cx,cy);
+  for(let d=-50;d<=50;d+=10){
+    const ang=(-90+d)*Math.PI/180;
+    const r1=R, r2=R-(d%30===0?22:13);
+    ctx.strokeStyle = d===0?"#FF6B2C":"rgba(133,149,166,.6)";
+    ctx.lineWidth = d===0?4:2;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(ang)*r1,Math.sin(ang)*r1);
+    ctx.lineTo(Math.cos(ang)*r2,Math.sin(ang)*r2);
+    ctx.stroke();
+  }
+  // punter (la moto): fix a dalt, indica la inclinació actual sobre l'escala
+  const pa=(-90+lean)*Math.PI/180;
+  ctx.fillStyle="#FF6B2C";
+  ctx.beginPath();
+  ctx.moveTo(Math.cos(pa)*(R-26),Math.sin(pa)*(R-26));
+  ctx.lineTo(Math.cos(pa+0.035)*(R-44),Math.sin(pa+0.035)*(R-44));
+  ctx.lineTo(Math.cos(pa-0.035)*(R-44),Math.sin(pa-0.035)*(R-44));
+  ctx.closePath();ctx.fill();
+  ctx.restore();
+}
+
+// ---- Gravació ----
+$("btnRec").addEventListener("click", ()=>{
+  recording = !recording;
+  const b=$("btnRec");
+  if(recording){
+    track=[]; recStart=Date.now(); maxLeft=0; maxRight=0;
+    $("maxL").textContent="0"; $("maxR").textContent="0";
+    b.classList.add("rec"); b.firstChild.textContent="Aturar";
+    $("recPill").classList.add("on"); $("btnExport").disabled=true;
+    toast("Gravant ruta");
+  }else{
+    b.classList.remove("rec"); b.firstChild.textContent="Gravar ruta";
+    $("recPill").classList.remove("on");
+    $("btnExport").disabled = track.length===0;
+    toast(track.length+" punts gravats");
+  }
+});
+
+// ---- Demo ----
+$("btnDemo").addEventListener("click", ()=>{
+  demo=!demo;
+  $("btnDemo").classList.toggle("primary",demo);
+  if(demo){ setGps("live","DEMO"); if(!running){$("startScreen").classList.add("hidden");$("btnRec").disabled=false;running=true;} }
+  else { setGps("search","Cercant satèl·lits…"); }
+});
+
+// ---- Exportar GPX + CSV ----
+$("btnExport").addEventListener("click", ()=>{
+  if(!track.length){ toast("No hi ha res per exportar"); return; }
+  const stamp = new Date().toISOString().replace(/[:.]/g,"-").slice(0,19);
+  download("ruta-"+stamp+".csv", toCSV(track), "text/csv");
+  download("ruta-"+stamp+".gpx", toGPX(track), "application/gpx+xml");
+  toast("Fitxers descarregats");
+});
+function toCSV(t){
+  let s="timestamp,lat,lon,speed_kmh,heading,lean_deg\n";
+  for(const p of t) s+=`${new Date(p.t).toISOString()},${p.lat.toFixed(6)},${p.lon.toFixed(6)},${(p.spd*3.6).toFixed(1)},${p.head.toFixed(1)},${p.lean.toFixed(1)}\n`;
+  return s;
+}
+function toGPX(t){
+  let s=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Inclinometre Moto" xmlns="http://www.topografix.com/GPX/1/1">\n<trk><name>Ruta moto</name><trkseg>\n`;
+  for(const p of t) s+=`<trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}"><time>${new Date(p.t).toISOString()}</time><extensions><lean>${p.lean.toFixed(1)}</lean><speed>${p.spd.toFixed(2)}</speed></extensions></trkpt>\n`;
+  s+=`</trkseg></trk></gpx>`;return s;
+}
+function download(name,content,type){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+
+// ---- Utils ----
+function bearing(la1,lo1,la2,lo2){
+  const r=Math.PI/180,φ1=la1*r,φ2=la2*r,Δλ=(lo2-lo1)*r;
+  const y=Math.sin(Δλ)*Math.cos(φ2);
+  const x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;
+}
+function setGps(state,txt){
+  const d=$("gpsDot");d.className="dot"+(state==="live"?" live":state==="search"?" search":"");
+  $("gpsTxt").textContent=txt;
+}
+let toastT;
+function toast(m){const el=$("toast");el.textContent=m;el.classList.add("show");
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2200);}
+async function requestWakeLock(){
+  try{ if("wakeLock" in navigator){ wakeLock=await navigator.wakeLock.request("screen");
+    document.addEventListener("visibilitychange",async()=>{
+      if(wakeLock!==null && document.visibilityState==="visible"){
+        try{wakeLock=await navigator.wakeLock.request("screen");}catch(e){}}
+    });}}catch(e){}
+}
+
+loop();
+</script>
+</body>
+</html>
