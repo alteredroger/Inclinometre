@@ -4,218 +4,852 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0E1116">
-<title>Spotify Now Playing — prova</title>
-
-<!-- ════════════════════════════════════════════════════════════════
-     ►►► BLOC 1 de 3 — ESTILS de la franja (va dins el teu <style>)
-     ════════════════════════════════════════════════════════════════ -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Inclinòmetre Moto</title>
 <style>
   :root{
-    --bg:#0E1116; --panel:#161B22; --line:#252C36;
-    --ink:#E8EEF4; --dim:#8595A6; --spotify:#1DB954;
+    --bg:#0E1116; --panel:#161B22; --line:#252C36; --ink:#E8EEF4; --dim:#8595A6;
+    --lean:#FF6B2C; --speed:#3FE0D0; --warn:#F2C14E; --bad:#E5484D; --good:#4ED27A;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
   body{
     background:var(--bg);color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-variant-numeric:tabular-nums;overflow:hidden;display:flex;flex-direction:column;
+    height:100dvh;user-select:none;-webkit-user-select:none;
   }
+  .topbar{display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px calc(14px + env(safe-area-inset-top)) 16px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:baseline;gap:8px}
+  .brand b{font-weight:800;letter-spacing:-0.02em;font-size:17px}
+  .brand span{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:0.14em}
+  .topright{display:flex;align-items:center;gap:14px}
+  .mini{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;
+    border:1px solid var(--line);padding:5px 9px;border-radius:8px;background:var(--panel)}
+  .mini.on{color:#1a0d04;background:var(--warn);border-color:var(--warn)}
+  .gps{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--dim)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--bad)}
+  .dot.live{background:var(--good)} .dot.search{background:var(--warn);animation:pulse 1.2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(242,193,78,.5)}70%{box-shadow:0 0 0 8px rgba(242,193,78,0)}100%{box-shadow:0 0 0 0 rgba(242,193,78,0)}}
 
-  /* ---- Franja Now Playing ---- */
+  .stage{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .horizon-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  #horizon{display:block}
+  .readout{position:relative;z-index:3;text-align:center;pointer-events:none}
+  .lean-num{font-size:clamp(80px,30vw,150px);font-weight:800;line-height:.9;letter-spacing:-0.04em;
+    color:var(--lean);text-shadow:0 2px 30px rgba(255,107,44,.25)}
+  .lean-num .deg{font-size:.4em;vertical-align:super;color:var(--dim);font-weight:600;margin-left:2px}
+  .lean-side{font-size:13px;text-transform:uppercase;letter-spacing:0.28em;color:var(--dim);margin-top:4px}
+  .src{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;margin-top:10px;color:var(--dim)}
+  .src b{color:var(--good)} .src.gpsonly b{color:var(--warn)}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}
+  .cell{padding:14px 8px;text-align:center;border-right:1px solid var(--line)}
+  .cell:last-child{border-right:none}
+  .cell .v{font-size:26px;font-weight:700;letter-spacing:-0.02em}
+  .cell .v.sp{color:var(--speed)} .cell .v.mx{color:var(--lean)}
+  .cell .k{font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--dim);margin-top:3px}
+  .cell .u{font-size:13px;color:var(--dim);font-weight:500}
+
+  .controls{display:flex;gap:10px;padding:12px 14px calc(14px + env(safe-area-inset-bottom)) 14px;border-top:1px solid var(--line)}
+  button{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:15px;
+    font-weight:600;padding:15px 8px;border-radius:13px;cursor:pointer;font-family:inherit;
+    transition:transform .06s,background .15s,border-color .15s}
+  button:active{transform:scale(.97)}
+  button.primary{background:var(--lean);border-color:var(--lean);color:#1a0d04}
+  button.rec{background:var(--bad);border-color:var(--bad);color:#fff}
+  button.ok{border-color:var(--good)}
+  button:disabled{opacity:.4;cursor:default}
+  button .sub{display:block;font-size:10px;font-weight:500;opacity:.75;margin-top:2px;text-transform:uppercase;letter-spacing:0.08em}
+
+  .overlay{position:absolute;inset:0;z-index:10;background:var(--bg);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;padding:32px;text-align:center;gap:18px}
+  .overlay h1{font-size:24px;font-weight:800;letter-spacing:-0.02em}
+  .overlay p{font-size:14px;color:var(--dim);line-height:1.6;max-width:340px}
+  .overlay .big{font-size:54px}
+  .overlay button{flex:none;width:100%;max-width:320px;padding:17px}
+  .hint{font-size:12px;color:var(--dim);max-width:340px;line-height:1.6}
+  .hint b{color:var(--warn)}
+  .hidden{display:none!important}
+
+  /* Calibració */
+  .calbox{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:28px 24px;
+    max-width:360px;width:100%;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .calstep{font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--lean);font-weight:700}
+  .calbox h2{font-size:21px;font-weight:800;letter-spacing:-0.02em}
+  .calbox .icon{font-size:46px;line-height:1}
+  .calbox .desc{font-size:14px;color:var(--dim);line-height:1.55}
+  .bar{width:100%;height:8px;background:var(--line);border-radius:6px;overflow:hidden}
+  .bar > i{display:block;height:100%;width:0;background:var(--lean);transition:width .12s linear}
+  .calrow{display:flex;gap:10px;width:100%}
+  .calrow button{padding:13px}
+
+  .toast{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);z-index:20;background:var(--panel);
+    border:1px solid var(--line);color:var(--ink);padding:10px 16px;border-radius:10px;font-size:13px;
+    opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw}
+  .toast.show{opacity:1}
+  .recpill{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:4;display:none;
+    align-items:center;gap:7px;background:rgba(229,72,77,.15);border:1px solid var(--bad);color:#fff;
+    padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600}
+  .recpill.on{display:flex}
+  .recpill .rd{width:8px;height:8px;border-radius:50%;background:var(--bad);animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.2}}
+  /* ---- PESTANYES ---- */
+  .tabbar{display:flex;border-bottom:1px solid var(--line);background:var(--bg)}
+  .tab{flex:1;border:none;background:none;color:var(--dim);font-size:14px;font-weight:700;
+    padding:13px 0;border-radius:0;border-bottom:2px solid transparent;letter-spacing:0.02em}
+  .tab.active{color:var(--ink);border-bottom-color:var(--lean)}
+  #viewMeasure,#viewViewer{flex:1;display:flex;flex-direction:column;min-height:0}
+  #viewViewer.hidden,#viewMeasure.hidden{display:none}
+
+  /* ---- VISOR ---- */
+  .vtools{display:flex;gap:9px;padding:12px 14px;border-bottom:1px solid var(--line);align-items:center}
+  .vtools button,.filebtn{flex:1;text-align:center;border:1px solid var(--line);background:var(--panel);
+    color:var(--ink);font-size:14px;font-weight:600;padding:12px 8px;border-radius:11px;cursor:pointer;font-family:inherit}
+  .vtools button:active,.filebtn:active{transform:scale(.97)}
+  .vtools #btnResetView{flex:0 0 46px;font-size:18px}
+  .filebtn{display:block} #gpxFile{display:none}
+  .vcanvas-wrap{position:relative;flex:1;min-height:0;overflow:hidden;touch-action:none}
+  #route3d{display:block;width:100%;height:100%}
+  .legend{position:absolute;top:16px;right:14px;display:flex;flex-direction:column;align-items:center;gap:6px;
+    background:rgba(14,17,22,.55);padding:10px 8px;border-radius:10px;border:1px solid var(--line)}
+  .legend-bar{width:12px;height:120px;border-radius:6px;
+    background:linear-gradient(to top,#4ED27A 0%,#F2C14E 50%,#E5484D 100%)}
+  .legend-labels{position:absolute;top:10px;bottom:26px;right:30px;display:flex;flex-direction:column;
+    justify-content:space-between;font-size:11px;color:var(--ink);text-align:right}
+  .legend-cap{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em}
+  .vempty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
+    color:var(--dim);font-size:14px;line-height:1.7;padding:30px}
+  .vempty b{color:var(--lean)}
+  .vstats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}
+  .vstats .cell{padding:13px 8px;text-align:center;border-right:1px solid var(--line)}
+  .vstats .cell:last-child{border-right:none}
+  .vstats .v{font-size:23px;font-weight:700} .vstats .v.mx{color:var(--lean)} .vstats .v.sp{color:var(--speed)}
+  .vstats .k{font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--dim);margin-top:3px}
+  .vstats .u{color:var(--dim);font-weight:500;font-size:12px}
+
+  /* ════════ Franja Now Playing (Spotify) ════════ */
+  :root{ --spotify:#1DB954 }
   #npBar{
-    position:sticky;top:0;z-index:50;
-    height:56px;display:flex;align-items:center;gap:12px;
-    padding:8px 14px;
-    padding-top:calc(8px + env(safe-area-inset-top)); /* respecta el notch */
-    height:calc(56px + env(safe-area-inset-top));
-    background:rgba(22,27,34,.92);
-    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
-    border-bottom:1px solid var(--line);
+    position:relative;        /* per ancorar la barra de progrés; z-index baix perquè els overlays el tapin */
+    flex:0 0 auto;
+    display:flex;align-items:center;gap:12px;
+    padding:8px 14px;padding-top:calc(8px + env(safe-area-inset-top));
+    background:var(--panel);border-bottom:1px solid var(--line);
     overflow:hidden;
   }
-  #npArt{
-    width:40px;height:40px;border-radius:8px;flex:0 0 auto;
-    background:#0b0e12 center/cover no-repeat;
-    box-shadow:0 1px 4px rgba(0,0,0,.4);
-  }
+  #npArt{width:38px;height:38px;border-radius:8px;flex:0 0 auto;
+    background:#0b0e12 center/cover no-repeat;box-shadow:0 1px 4px rgba(0,0,0,.4)}
   #npMeta{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px}
   #npTitle{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #npArtist{font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #npIcon{flex:0 0 auto;color:var(--spotify);display:flex;align-items:center}
-
-  /* botó de connectar (quan encara no hi ha sessió) */
-  #npConnect{
-    margin-left:auto;flex:0 0 auto;
-    background:var(--spotify);color:#062b13;border:none;border-radius:20px;
-    padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;
-  }
-  /* barra de progrés a baix de tot de la franja */
+  #npConnect{margin-left:auto;flex:0 0 auto;background:var(--spotify);color:#062b13;border:none;
+    border-radius:20px;padding:8px 15px;font-size:13px;font-weight:700;cursor:pointer}
   #npProg{position:absolute;left:0;bottom:0;height:2px;width:0;background:var(--spotify);transition:width .9s linear}
-
-  /* estats */
   #npBar.idle #npTitle{color:var(--dim)}
-  .npHidden{display:none !important}
-
-  /* (decoració de la pàgina de prova, NO cal copiar-ho) */
-  .demoBody{padding:24px;color:var(--dim);font-size:14px;line-height:1.6}
+  .npHidden{display:none!important}
 </style>
 </head>
 <body>
 
-<!-- ════════════════════════════════════════════════════════════════
-     ►►► BLOC 2 de 3 — HTML de la franja (posa'l com a PRIMER element del <body>)
-     ════════════════════════════════════════════════════════════════ -->
+<!-- ════════ Franja Now Playing (Spotify) ════════ -->
 <div id="npBar" class="idle">
   <div id="npArt"></div>
   <div id="npMeta">
     <div id="npTitle">No connectat a Spotify</div>
-    <div id="npArtist">Prem el botó per vincular el teu compte</div>
+    <div id="npArtist">Toca per copiar la Redirect URI</div>
   </div>
   <div id="npIcon" class="npHidden">
-    <!-- icona Spotify -->
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0a12 12 0 100 24 12 12 0 000-24zm5.5 17.3a.75.75 0 01-1 .25c-2.8-1.7-6.3-2.1-10.4-1.1a.75.75 0 11-.34-1.46c4.5-1 8.3-.6 11.5 1.3.36.22.47.69.25 1.02zm1.5-3.3a.94.94 0 01-1.3.3c-3.2-2-8.1-2.5-11.9-1.4a.94.94 0 11-.54-1.8c4.3-1.3 9.7-.7 13.4 1.6.44.27.58.85.3 1.3zm.13-3.4C15.4 8.2 9 8 5.4 9.1a1.12 1.12 0 11-.66-2.15C8.9 5.7 16 5.9 20.3 8.5a1.12 1.12 0 11-1.17 1.9z"/></svg>
   </div>
   <button id="npConnect">♪ Connecta Spotify</button>
   <div id="npProg"></div>
 </div>
 
-<!-- ↓↓↓ això és només contingut de prova perquè vegis la franja a dalt ↓↓↓ -->
-<div class="demoBody">
-  <p>Aquesta és la pàgina aïllada de prova. Quan la franja de dalt et mostri la cançó que sona, ja saps que la connexió va bé i podrem moure els 3 blocs marcats al teu <code>inclinometre-moto.html</code>.</p>
+<!-- Inici -->
+<div class="overlay" id="startScreen">
+  <div class="big">🏍️</div>
+  <h1>Inclinòmetre Moto</h1>
+  <p>Mesura quant inclines a les corbes amb el GPS i el giroscopi del telèfon. Cap hardware extra.</p>
+  <button class="primary" id="btnStart">Activar sensors</button>
+  <div class="hint">Cal permís de <b>moviment</b> i <b>ubicació</b>. Munta el telèfon <b>rígid</b> a la moto i després prem <b>Calibrar</b> per ajustar la seva posició.</div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════════════
-     ►►► BLOC 3 de 3 — LÒGICA (posa-la abans del </body>)
-         👉 NOMÉS has de canviar CLIENT_ID per la teva.
-     ════════════════════════════════════════════════════════════════ -->
+<!-- Calibració -->
+<div class="overlay hidden" id="calScreen">
+  <div class="calbox">
+    <div class="calstep" id="calStep">Pas 1 de 2</div>
+    <div class="icon" id="calIcon">🅿️</div>
+    <h2 id="calTitle">Moto dreta i quieta</h2>
+    <div class="desc" id="calDesc">Posa la moto vertical sobre terreny pla i no la moguis. Capturant la referència…</div>
+    <div class="bar"><i id="calBar"></i></div>
+    <div class="calrow">
+      <button id="calCancel">Cancel·lar</button>
+      <button id="calNext" class="primary hidden">Següent</button>
+    </div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="brand"><b>LEAN</b><span>angle</span></div>
+  <div class="topright">
+    <span class="mini" id="demoToggle">Demo</span>
+    <div class="gps"><span class="dot" id="gpsDot"></span><span id="gpsTxt">Sense GPS</span></div>
+  </div>
+</div>
+
+<div class="tabbar">
+  <button class="tab active" id="tabMeasure">Mesura</button>
+  <button class="tab" id="tabViewer">Visor</button>
+</div>
+
+<div id="viewMeasure">
+<div class="stage">
+  <div class="recpill" id="recPill"><span class="rd"></span><span id="recTime">00:00</span></div>
+  <div class="horizon-wrap"><canvas id="horizon" width="640" height="640"></canvas></div>
+  <div class="readout">
+    <div class="lean-num"><span id="leanVal">0</span><span class="deg">°</span></div>
+    <div class="lean-side" id="leanSide">anivellat</div>
+    <div class="src gpsonly" id="srcTxt">font: <b>acceleròmetre + GPS</b> · sense calibrar</div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="cell"><div class="v sp"><span id="spd">0</span></div><div class="k">Velocitat <span class="u">km/h</span></div></div>
+  <div class="cell"><div class="v mx"><span id="maxL">0</span>°</div><div class="k">Màx esq.</div></div>
+  <div class="cell"><div class="v mx"><span id="maxR">0</span>°</div><div class="k">Màx dreta</div></div>
+</div>
+
+<div class="controls">
+  <button id="btnCal">Calibrar<span class="sub" id="calSub">posició mòbil</span></button>
+  <button id="btnRec" disabled>Gravar ruta<span class="sub" id="recSub">0 punts</span></button>
+  <button id="btnExport" disabled>Exportar<span class="sub">GPX + CSV</span></button>
+</div>
+</div><!-- /viewMeasure -->
+
+<div id="viewViewer" class="hidden">
+  <div class="vtools">
+    <button id="btnLast">Última ruta</button>
+    <label class="filebtn" for="gpxFile">Obrir GPX…</label>
+    <input id="gpxFile" type="file" accept=".gpx,application/gpx+xml,application/octet-stream">
+    <button id="btnResetView" title="Centrar vista">⟲</button>
+  </div>
+  <div class="vcanvas-wrap">
+    <canvas id="route3d"></canvas>
+    <div class="legend">
+      <div class="legend-bar"></div>
+      <div class="legend-labels"><span id="legMax">–</span><span id="legMin">–</span></div>
+      <div class="legend-cap">inclinació</div>
+    </div>
+    <div class="vempty" id="vEmpty">Cap ruta carregada.<br>Tria <b>Última ruta</b> o obre un <b>GPX</b> del telèfon.</div>
+  </div>
+  <div class="vstats">
+    <div class="cell"><div class="v mx"><span id="vMax">0</span>°</div><div class="k">Inclinació màx.</div></div>
+    <div class="cell"><div class="v sp"><span id="vDist">0</span></div><div class="k">Distància <span class="u">km</span></div></div>
+    <div class="cell"><div class="v"><span id="vDur">0</span></div><div class="k">Durada <span class="u">min</span></div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const G = 9.81, RAD = Math.PI/180, $ = id => document.getElementById(id);
+
+// ---- vectors 3D ----
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+const scl=(a,s)=>[a[0]*s,a[1]*s,a[2]*s];
+const len=a=>Math.sqrt(dot(a,a));
+const unit=a=>{const m=len(a)||1;return [a[0]/m,a[1]/m,a[2]/m];};
+
+// ---- estat ----
+let running=false, demo=false, recording=false, calibrated=false;
+let lastLat=null,lastLon=null,lastHeading=null,lastFixT=null;
+let speedMps=0;
+let leanGps=0;          // referència absoluta (GPS), graus, + = dreta
+let leanFused=0;        // valor mostrat (gir + GPS)
+let leanShown=0;
+let maxLeft=0,maxRight=0;
+let track=[], recStart=0, recTimer=null;
+let wakeLock=null;
+let lastMotionT=null, motionAlive=false, aSmooth=9.81;
+
+// ---- calibració ----
+let gravRef=[0,0,1];    // "vertical" en eixos del telèfon (unitari)
+let gyroBias=[0,0,0];   // deg/s
+let rollAxis=[1,0,0];   // eix de roll de la moto en eixos del telèfon
+let rollSign=1;
+// auto-detecció del signe de roll comparant amb el GPS
+let signCorr=0, signLocked=false, rollAccum=0, prevLeanGps=0, signFixes=0;
+
+// captura de calibració
+let cal=null;
+const CAL1_MS=2600, CAL2_MS=6000, CAL2_TARGET=900;
+
+// ===== arrencada =====
+$("btnStart").addEventListener("click", async ()=>{
+  try{
+    if(typeof DeviceMotionEvent!=="undefined" && typeof DeviceMotionEvent.requestPermission==="function"){
+      const r=await DeviceMotionEvent.requestPermission();
+      if(r!=="granted") toast("Permís de moviment denegat");
+    }
+    if(typeof DeviceOrientationEvent!=="undefined" && typeof DeviceOrientationEvent.requestPermission==="function"){
+      try{await DeviceOrientationEvent.requestPermission();}catch(e){}
+    }
+    window.addEventListener("devicemotion", onMotion, true);
+    startGPS(); requestWakeLock();
+    running=true; $("startScreen").classList.add("hidden"); $("btnRec").disabled=false;
+  }catch(e){ toast("Error activant sensors: "+e.message); }
+});
+
+// ===== GPS =====
+function startGPS(){
+  if(!("geolocation" in navigator)){ setGps("bad","Sense GPS"); toast("Sense geolocalització"); return; }
+  setGps("search","Cercant satèl·lits…");
+  navigator.geolocation.watchPosition(onFix,onGpsErr,{enableHighAccuracy:true,maximumAge:0,timeout:15000});
+}
+function onGpsErr(err){ setGps("bad","GPS error"); if(err.code===1) toast("Permís d'ubicació denegat. Cal HTTPS."); }
+let cogHeading=null;   // rumb (course over ground) suavitzat, des de la posició
+function onFix(pos){
+  if(demo) return;
+  const c=pos.coords, now=pos.timestamp||Date.now();
+  setGps("live","GPS · "+(c.accuracy?Math.round(c.accuracy)+"m":"ok"));
+
+  // velocitat: del GPS si hi és, amb sostre per filtrar pics
+  let v=(c.speed!=null && !isNaN(c.speed))?c.speed:speedMps;
+
+  // RUMB DES DE LA POSICIÓ: coords.heading del navegador no és fiable (es queda quiet).
+  // El recalculem amb el desplaçament entre fixos i fem una porta de distància per
+  // descartar el rumb-soroll quan estàs gairebé aturat.
+  let measHeading=null;
+  if(lastLat!=null){
+    const dist=haversine(lastLat,lastLon,c.latitude,c.longitude);
+    if((c.speed==null||isNaN(c.speed)) && lastFixT!=null){
+      const ddt=(now-lastFixT)/1000; if(ddt>0) v=dist/ddt;   // velocitat de reserva
+    }
+    if(dist>2.0) measHeading=bearing(lastLat,lastLon,c.latitude,c.longitude);
+  }
+  v=Math.min(v,60); speedMps=v;
+
+  if(measHeading!=null){
+    if(cogHeading==null){ cogHeading=measHeading; }
+    else if(lastFixT!=null){
+      const dt=(now-lastFixT)/1000;
+      let d=measHeading-cogHeading; while(d>180)d-=360; while(d<-180)d+=360;
+      cogHeading=(cogHeading+0.5*d+360)%360;                 // suavitza el rumb
+      if(dt>0.05){
+        const yaw=(0.5*d*RAD)/dt, aLat=v*yaw;                // ω = canvi de rumb / temps
+        let L=Math.atan2(aLat,G)/RAD;
+        leanGps = v>2.2 ? Math.max(-50,Math.min(50,L)) : 0;
+      }
+    }
+  } else {
+    leanGps=0;   // aturat o moviment insuficient → no hi ha corba
+  }
+  lastLat=c.latitude; lastLon=c.longitude; lastFixT=now;
+
+  // auto-signe del roll: el gir integrat ha de coincidir amb el canvi de lean del GPS
+  if(calibrated && !signLocked){
+    const dG=leanGps-prevLeanGps;
+    if(Math.abs(dG)>1.5 && Math.abs(rollAccum)>1.5){
+      signCorr += dG*rollAccum; signFixes++;
+      if(signFixes>=6){ if(signCorr<0) rollSign*=-1; signLocked=true; }
+    }
+    rollAccum=0; prevLeanGps=leanGps;
+  }
+}
+
+// ===== moviment (giroscopi + acceleròmetre) =====
+function onMotion(e){
+  const now=performance.now();
+  const dt = e.interval ? e.interval : (lastMotionT?(now-lastMotionT):16);
+  lastMotionT=now;
+  const dts=Math.min(dt/1000,0.1);
+
+  const rr=e.rotationRate||{}, ag=e.accelerationIncludingGravity||{};
+  // ω en eixos del dispositiu [x,y,z] = [beta,gamma,alpha] (deg/s)
+  const w=[rr.beta||0, rr.gamma||0, rr.alpha||0];
+  const acc=[ag.x||0, ag.y||0, ag.z||0];
+
+  // --- en calibració ---
+  if(cal){
+    if(cal.step===1){
+      cal.gSum=[cal.gSum[0]+acc[0],cal.gSum[1]+acc[1],cal.gSum[2]+acc[2]];
+      cal.bSum=[cal.bSum[0]+w[0],cal.bSum[1]+w[1],cal.bSum[2]+w[2]]; cal.n++;
+    } else if(cal.step===2){
+      const wb=sub(w,gyroBias);                       // treu bias
+      const wh=sub(wb, scl(gravRef,dot(wb,gravRef)));  // component horitzontal (= roll pur)
+      const m=len(wh);
+      if(m>8){ // ignora soroll/quietud
+        if(!cal.seed) cal.seed=unit(wh);
+        const s=dot(wh,cal.seed)>=0?1:-1;
+        cal.acc=[cal.acc[0]+wh[0]*s,cal.acc[1]+wh[1]*s,cal.acc[2]+wh[2]*s];
+        cal.weight+=m;
+      }
+    }
+    return;
+  }
+
+  motionAlive=true;
+  if(demo) return;
+
+  // mòdul de l'acceleració (inclou gravetat) i el seu suavitzat (per detectar bots/frenades)
+  const aMag=len(acc);
+  aSmooth += (aMag-aSmooth)*0.12;
+  const jerk=Math.abs(aMag-aSmooth);
+
+  // --- GIROSCOPI: predicció ràpida (només si calibrat, que és quan sabem l'eix de roll) ---
+  if(calibrated){
+    const wb=sub(w,gyroBias);
+    const rollRate=rollSign*dot(wb,rollAxis);          // deg/s al voltant de l'eix de marxa
+    leanFused += rollRate*dts;                          // dinàmica ràpida
+    rollAccum += rollRate*dts;                          // per a l'auto-signe
+  }
+
+  // --- ACCELERÒMETRE: θ = acos(g/|a|), àncora absoluta a alta freqüència ---
+  let wAcc=0, leanAccSigned=0;
+  if(aMag>0){
+    const leanAccMag=Math.acos(Math.max(-1,Math.min(1,G/aMag)))/RAD;   // magnitud, sense signe
+    // signe: del valor actual (gir) o, si està molt dret, del GPS
+    const sgn = Math.abs(leanFused)>2 ? Math.sign(leanFused) : (Math.abs(leanGps)>2?Math.sign(leanGps):0);
+    leanAccSigned = sgn*leanAccMag;
+    // confiança: rang plausible · estat estacionari · poca accel longitudinal (frenada/gas)
+    const wRange = (aMag>=8.5 && aMag<=16)?1:0;
+    const wStead = Math.max(0,Math.min(1,1-jerk/4));
+    let wFA=1;
+    if(calibrated){ const fa=dot(acc,rollAxis); wFA=Math.max(0,Math.min(1,1-Math.abs(fa)/5)); }
+    wAcc = sgn===0 ? 0 : wRange*wStead*wFA;
+  }
+
+  // --- correccions cap a les dues àncores absolutes ---
+  const kAcc = 1.6*wAcc;                                  // acceleròmetre: ràpid quan és net
+  const kGps = speedMps>2.2 ? 0.30 : 1.4;                 // GPS: lent (1 Hz) / fort a l'aturada
+  leanFused += kAcc*(leanAccSigned-leanFused)*dts;
+  leanFused += kGps*(leanGps-leanFused)*dts;
+  if(leanFused>60)leanFused=60; if(leanFused<-60)leanFused=-60;
+}
+
+// ===== calibració: control =====
+$("btnCal").addEventListener("click", startCal);
+$("calCancel").addEventListener("click", ()=>{ cal=null; $("calScreen").classList.add("hidden"); });
+$("calNext").addEventListener("click", ()=> calStep2());
+
+function startCal(){
+  if(!running && !demo){ toast("Activa primer els sensors"); return; }
+  if(demo){ toast("Surt del mode demo per calibrar"); return; }
+  cal={step:1,t0:performance.now(),n:0,gSum:[0,0,0],bSum:[0,0,0],acc:[0,0,0],weight:0,seed:null};
+  $("calScreen").classList.remove("hidden");
+  $("calStep").textContent="Pas 1 de 2";
+  $("calIcon").textContent="🅿️";
+  $("calTitle").textContent="Moto dreta i quieta";
+  $("calDesc").textContent="Posa la moto vertical sobre terreny pla i no la moguis. Capturant la referència…";
+  $("calNext").classList.add("hidden");
+  tickCal();
+}
+function tickCal(){
+  if(!cal) return;
+  const el=performance.now()-cal.t0;
+  if(cal.step===1){
+    $("calBar").style.width=Math.min(el/CAL1_MS*100,100)+"%";
+    if(el>=CAL1_MS){
+      if(cal.n>3){ gravRef=unit(scl(cal.gSum,1/cal.n)); gyroBias=scl(cal.bSum,1/cal.n); }
+      // passa al pas 2 (manual amb botó perquè l'usuari es prepari)
+      $("calStep").textContent="Pas 2 de 2";
+      $("calIcon").textContent="↔️";
+      $("calTitle").textContent="Bressola la moto";
+      $("calDesc").textContent="Inclina-la a poc a poc cap a un costat i cap a l'altre, com a una corba, fins que la barra s'ompli. Prem Següent quan estiguis a punt.";
+      $("calBar").style.width="0%";
+      $("calNext").classList.remove("hidden");
+      cal.step="wait";
+      return;
+    }
+  } else if(cal.step===2){
+    $("calBar").style.width=Math.min(cal.weight/CAL2_TARGET*100,100)+"%";
+    if(cal.weight>=CAL2_TARGET || el-cal.t2>=CAL2_MS){ finishCal(); return; }
+  }
+  requestAnimationFrame(tickCal);
+}
+function calStep2(){
+  $("calNext").classList.add("hidden");
+  cal.step=2; cal.t0=performance.now(); cal.t2=0; cal.acc=[0,0,0]; cal.weight=0; cal.seed=null;
+  tickCal();
+}
+function finishCal(){
+  const ok = cal.weight>CAL2_TARGET*0.4 && len(cal.acc)>0;
+  if(ok){
+    rollAxis=unit(cal.acc);
+    calibrated=true; signLocked=false; signCorr=0; signFixes=0; rollSign=1; rollAccum=0; prevLeanGps=leanGps;
+    leanFused=leanGps;
+    $("calSub").textContent="✓ calibrat"; $("btnCal").classList.add("ok");
+    $("srcTxt").classList.remove("gpsonly"); $("srcTxt").innerHTML='font: <b>gir + acceleròmetre + GPS</b>';
+    toast("Calibrat ✓ — fusió activa");
+  } else {
+    toast("Poc moviment detectat, torna-ho a provar");
+  }
+  cal=null; $("calScreen").classList.add("hidden");
+}
+
+// ===== bucle de render =====
+function loop(){
+  if(demo){
+    const t=Date.now()/1000;
+    leanFused=Math.sin(t*0.6)*38+Math.sin(t*1.7)*6;
+    speedMps=14+Math.sin(t*0.3)*6;
+  } else if(!motionAlive){
+    leanFused += (leanGps-leanFused)*0.12;  // sense IMU: només GPS, suavitzat
+  }
+  leanShown += (leanFused-leanShown)*0.35;
+
+  $("leanVal").textContent=Math.round(Math.abs(leanShown));
+  const side=leanShown>1.5?"dreta":leanShown<-1.5?"esquerra":"anivellat";
+  $("leanSide").textContent=side==="anivellat"?"anivellat":"inclinant a "+side;
+  $("spd").textContent=Math.round(speedMps*3.6);
+  if(leanShown>maxRight){maxRight=leanShown;$("maxR").textContent=Math.round(maxRight);}
+  if(-leanShown>maxLeft){maxLeft=-leanShown;$("maxL").textContent=Math.round(maxLeft);}
+
+  drawHorizon(leanShown);
+  if(recording){const s=Math.floor((Date.now()-recStart)/1000);
+    $("recTime").textContent=String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");}
+  requestAnimationFrame(loop);
+}
+
+// ===== horitzó artificial =====
+const cv=$("horizon"), ctx=cv.getContext("2d");
+function drawHorizon(lean){
+  const w=cv.width,h=cv.height,cx=w/2,cy=h/2,R=w*0.46;
+  ctx.clearRect(0,0,w,h);
+  ctx.save();
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.clip();
+  ctx.translate(cx,cy);ctx.rotate(-lean*RAD);
+  const sky=ctx.createLinearGradient(0,-R,0,0);sky.addColorStop(0,"#13202b");sky.addColorStop(1,"#1d3340");
+  ctx.fillStyle=sky;ctx.fillRect(-R*1.6,-R*1.6,R*3.2,R*1.6);
+  const gnd=ctx.createLinearGradient(0,0,0,R);gnd.addColorStop(0,"#2a1c12");gnd.addColorStop(1,"#160f09");
+  ctx.fillStyle=gnd;ctx.fillRect(-R*1.6,0,R*3.2,R*1.6);
+  ctx.strokeStyle="rgba(232,238,244,.55)";ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(-R*1.6,0);ctx.lineTo(R*1.6,0);ctx.stroke();
+  ctx.strokeStyle="rgba(232,238,244,.18)";ctx.lineWidth=2;
+  for(let d=-45;d<=45;d+=15){if(d===0)continue;const y=-(d/45)*R*0.5,l=R*0.12;
+    ctx.beginPath();ctx.moveTo(-l,y);ctx.lineTo(l,y);ctx.stroke();}
+  ctx.restore();
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.strokeStyle="#252C36";ctx.lineWidth=6;ctx.stroke();
+  ctx.save();ctx.translate(cx,cy);
+  for(let d=-50;d<=50;d+=10){const a=(-90+d)*RAD,r1=R,r2=R-(d%30===0?22:13);
+    ctx.strokeStyle=d===0?"#FF6B2C":"rgba(133,149,166,.6)";ctx.lineWidth=d===0?4:2;
+    ctx.beginPath();ctx.moveTo(Math.cos(a)*r1,Math.sin(a)*r1);ctx.lineTo(Math.cos(a)*r2,Math.sin(a)*r2);ctx.stroke();}
+  const pa=(-90+lean)*RAD;ctx.fillStyle="#FF6B2C";ctx.beginPath();
+  ctx.moveTo(Math.cos(pa)*(R-26),Math.sin(pa)*(R-26));
+  ctx.lineTo(Math.cos(pa+0.035)*(R-44),Math.sin(pa+0.035)*(R-44));
+  ctx.lineTo(Math.cos(pa-0.035)*(R-44),Math.sin(pa-0.035)*(R-44));
+  ctx.closePath();ctx.fill();ctx.restore();
+}
+
+// ===== gravació a 200 ms =====
+$("btnRec").addEventListener("click", ()=>{
+  recording=!recording; const b=$("btnRec");
+  if(recording){
+    track=[]; recStart=Date.now(); maxLeft=0; maxRight=0; $("maxL").textContent="0"; $("maxR").textContent="0";
+    b.classList.add("rec"); b.firstChild.textContent="Aturar"; $("recPill").classList.add("on"); $("btnExport").disabled=true;
+    recTimer=setInterval(recordSample,100);
+    toast("Gravant a 10 punts/s");
+  }else{
+    clearInterval(recTimer); recTimer=null;
+    b.classList.remove("rec"); b.firstChild.textContent="Gravar ruta"; $("recPill").classList.remove("on");
+    $("btnExport").disabled=track.length===0; toast(track.length+" punts gravats");
+  }
+});
+function recordSample(){
+  let lat=lastLat, lon=lastLon;
+  if(demo){ // posició sintètica perquè es pugui provar l'exportació
+    const t=Date.now()/1000; lat=41.387+Math.sin(t*0.05)*0.01; lon=2.17+Math.cos(t*0.05)*0.01;
+  }
+  if(lat==null||lon==null) return;
+  track.push({t:Date.now(),lat,lon,spd:speedMps,head:cogHeading||0,lean:leanFused});
+  $("recSub").textContent=track.length+" punts";
+}
+
+// ===== demo =====
+$("demoToggle").addEventListener("click", ()=>{
+  demo=!demo; $("demoToggle").classList.toggle("on",demo);
+  if(demo){ setGps("live","DEMO"); if(!running){$("startScreen").classList.add("hidden");$("btnRec").disabled=false;running=true;} }
+  else setGps("search","Cercant satèl·lits…");
+});
+
+// ===== exportar =====
+$("btnExport").addEventListener("click", ()=>{
+  if(!track.length){ toast("No hi ha res per exportar"); return; }
+  const s=new Date().toISOString().replace(/[:.]/g,"-").slice(0,19);
+  download("ruta-"+s+".csv",toCSV(track),"text/csv");
+  download("ruta-"+s+".gpx",toGPX(track),"application/gpx+xml");
+  toast("Fitxers descarregats");
+});
+function toCSV(t){let s="timestamp,lat,lon,speed_kmh,heading,lean_deg\n";
+  for(const p of t)s+=`${new Date(p.t).toISOString()},${p.lat.toFixed(6)},${p.lon.toFixed(6)},${(p.spd*3.6).toFixed(1)},${p.head.toFixed(1)},${p.lean.toFixed(1)}\n`;return s;}
+function toGPX(t){let s=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Inclinometre Moto" xmlns="http://www.topografix.com/GPX/1/1">\n<trk><name>Ruta moto</name><trkseg>\n`;
+  for(const p of t)s+=`<trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}"><time>${new Date(p.t).toISOString()}</time><extensions><lean>${p.lean.toFixed(1)}</lean><speed>${p.spd.toFixed(2)}</speed></extensions></trkpt>\n`;
+  s+=`</trkseg></trk></gpx>`;return s;}
+function download(name,content,type){const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
+
+// ===== utils =====
+function haversine(la1,lo1,la2,lo2){const R=6371000,φ1=la1*RAD,φ2=la2*RAD,dφ=(la2-la1)*RAD,dλ=(lo2-lo1)*RAD;
+  const x=Math.sin(dφ/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
+  return 2*R*Math.asin(Math.min(1,Math.sqrt(x)));}
+function bearing(la1,lo1,la2,lo2){const φ1=la1*RAD,φ2=la2*RAD,Δλ=(lo2-lo1)*RAD;
+  const y=Math.sin(Δλ)*Math.cos(φ2),x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+  return (Math.atan2(y,x)/RAD+360)%360;}
+function setGps(state,txt){const d=$("gpsDot");
+  d.className="dot"+(state==="live"?" live":state==="search"?" search":"");$("gpsTxt").textContent=txt;}
+let toastT;function toast(m){const el=$("toast");el.textContent=m;el.classList.add("show");
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2400);}
+async function requestWakeLock(){try{if("wakeLock" in navigator){wakeLock=await navigator.wakeLock.request("screen");
+  document.addEventListener("visibilitychange",async()=>{if(wakeLock!==null&&document.visibilityState==="visible"){
+    try{wakeLock=await navigator.wakeLock.request("screen");}catch(e){}}});}}catch(e){}}
+
+// ===================== VISOR 3D =====================
+const r3d=$("route3d"), rctx=r3d.getContext("2d");
+let route=null;                       // {pts:[{nx,ny,nz,tn}], maxLean, minLean, distKm, durMin}
+const cam={az:0.7, el:0.95, dist:2.9};
+
+// --- pestanyes ---
+function showTab(which){
+  const v=which==="viewer";
+  $("tabMeasure").classList.toggle("active",!v);
+  $("tabViewer").classList.toggle("active",v);
+  $("viewMeasure").classList.toggle("hidden",v);
+  $("viewViewer").classList.toggle("hidden",!v);
+  if(v){ resizeR3D(); renderRoute(); }
+}
+$("tabMeasure").addEventListener("click",()=>showTab("measure"));
+$("tabViewer").addEventListener("click",()=>showTab("viewer"));
+
+// --- parseig GPX ---
+function parseGPX(text){
+  const out=[]; let leanSeen=false;
+  const re=/<trkpt[^>]*?lat="([-\d.]+)"[^>]*?lon="([-\d.]+)"[^>]*?>([\s\S]*?)<\/trkpt>/g;
+  let m;
+  while((m=re.exec(text))){
+    const lat=+m[1], lon=+m[2], inner=m[3];
+    const lm=inner.match(/<lean>([-\d.]+)<\/lean>/);
+    const tm=inner.match(/<time>([^<]+)<\/time>/);
+    let lean=0; if(lm){ lean=+lm[1]; leanSeen=true; }
+    const t=tm?Date.parse(tm[1]):null;
+    if(isFinite(lat)&&isFinite(lon)) out.push({lat,lon,lean,t});
+  }
+  if(!leanSeen && out.length>3) computeLeanFromTrack(out); // GPX extern sense inclinació
+  return out;
+}
+// reconstrueix inclinació des de la geometria (mateix model de corba coordinada)
+function computeLeanFromTrack(pts){
+  let hd=null, lean=0;
+  for(let i=1;i<pts.length;i++){
+    const a=pts[i-1], b=pts[i];
+    const dt=(a.t!=null&&b.t!=null)?(b.t-a.t)/1000:1;
+    const d=haversine(a.lat,a.lon,b.lat,b.lon), v=dt>0?Math.min(d/dt,60):0;
+    let target=0;
+    if(d>2){ const h=bearing(a.lat,a.lon,b.lat,b.lon);
+      if(hd==null) hd=h; else{ let dp=h-hd; while(dp>180)dp-=360; while(dp<-180)dp+=360;
+        hd=(hd+0.5*dp+360)%360; if(v>2.2&&dt>0){ const yaw=(0.5*dp*RAD)/dt;
+          target=Math.max(-50,Math.min(50,Math.atan2(v*yaw,G)/RAD)); } } }
+    lean+=0.45*(target-lean); b.lean=lean;
+  }
+}
+
+// --- càrrega d'una ruta a l'escena ---
+function loadRoute(pts){
+  if(!pts||pts.length<2){ toast("Ruta buida o massa curta"); return; }
+  // mostreig per rendiment si és molt llarga
+  let p=pts; if(pts.length>3000){ const st=Math.ceil(pts.length/3000); p=pts.filter((_,i)=>i%st===0); }
+  const lat0=p.reduce((s,q)=>s+q.lat,0)/p.length, lon0=p.reduce((s,q)=>s+q.lon,0)/p.length;
+  const mLat=110540, mLon=111320*Math.cos(lat0*RAD);
+  let R=1e-6, maxL=0, minL=1e9;
+  const xy=p.map(q=>{ const x=(q.lon-lon0)*mLon, y=(q.lat-lat0)*mLat, a=Math.abs(q.lean);
+    R=Math.max(R,Math.hypot(x,y)); maxL=Math.max(maxL,a); minL=Math.min(minL,a); return {x,y,a}; });
+  const sc=0.92/R, ZH=0.5, span=(maxL-minL)||1;
+  route={ pts: xy.map(q=>({ nx:q.x*sc, ny:q.y*sc, nz:(maxL?q.a/maxL:0)*ZH, tn:(q.a-minL)/span })),
+          maxLean:maxL, minLean:minL };
+  // estadístiques (sobre la ruta completa)
+  let dist=0; for(let i=1;i<pts.length;i++) dist+=haversine(pts[i-1].lat,pts[i-1].lon,pts[i].lat,pts[i].lon);
+  const realMax=pts.reduce((s,q)=>Math.max(s,Math.abs(q.lean)),0);
+  const t0=pts.find(q=>q.t!=null), t1=[...pts].reverse().find(q=>q.t!=null);
+  const dur=(t0&&t1&&t1.t>t0.t)?((t1.t-t0.t)/60000):null;
+  $("vMax").textContent=Math.round(realMax);
+  $("vDist").textContent=(dist/1000).toFixed(1);
+  $("vDur").textContent=dur!=null?Math.round(dur):"–";
+  $("legMax").textContent=Math.round(maxL)+"°";
+  $("legMin").textContent=Math.round(minL)+"°";
+  $("vEmpty").style.display="none";
+  cam.az=0.7; cam.el=0.95; cam.dist=2.9;
+  resizeR3D(); renderRoute();
+}
+
+// --- projecció 3D i render ---
+function resizeR3D(){
+  const w=r3d.parentElement.clientWidth, h=r3d.parentElement.clientHeight, dpr=Math.min(window.devicePixelRatio||1,2);
+  r3d.width=w*dpr; r3d.height=h*dpr;
+}
+function project(pt,W,H,focal,cx,cy){
+  const ca=Math.cos(cam.az),sa=Math.sin(cam.az), ce=Math.cos(cam.el),se=Math.sin(cam.el);
+  const x1=pt.nx*ca-pt.ny*sa, y1=pt.nx*sa+pt.ny*ca, z1=pt.nz;
+  const y2=y1*ce-z1*se, z2=y1*se+z1*ce, x2=x1;
+  const depth=y2+cam.dist; if(depth<=0.05) return null;
+  const f=focal/depth; return {sx:cx+x2*f, sy:cy-z2*f, depth};
+}
+function ramp(t){ // verd → groc → vermell
+  t=Math.max(0,Math.min(1,t));
+  const c0=[78,210,122],c1=[242,193,78],c2=[229,72,77];
+  let a,b,k; if(t<0.5){a=c0;b=c1;k=t/0.5;}else{a=c1;b=c2;k=(t-0.5)/0.5;}
+  return `rgb(${Math.round(a[0]+(b[0]-a[0])*k)},${Math.round(a[1]+(b[1]-a[1])*k)},${Math.round(a[2]+(b[2]-a[2])*k)})`;
+}
+function renderRoute(){
+  const W=r3d.width,H=r3d.height; rctx.clearRect(0,0,W,H);
+  if(!route) return;
+  const focal=Math.min(W,H)*0.92, cx=W/2, cy=H*0.56;
+  const P=route.pts.map(p=>project(p,W,H,focal,cx,cy));
+  const Pg=route.pts.map(p=>project({nx:p.nx,ny:p.ny,nz:0},W,H,focal,cx,cy)); // ombra a terra
+  // footprint
+  rctx.strokeStyle="rgba(133,149,166,.25)"; rctx.lineWidth=1.5; rctx.beginPath();
+  let started=false; for(const g of Pg){ if(!g){started=false;continue;} if(!started){rctx.moveTo(g.sx,g.sy);started=true;} else rctx.lineTo(g.sx,g.sy);} rctx.stroke();
+  // segments acolorits, ordenats per profunditat (lluny primer)
+  const segs=[]; for(let i=1;i<P.length;i++){ const a=P[i-1],b=P[i]; if(!a||!b)continue;
+    segs.push({a,b,depth:(a.depth+b.depth)/2,tn:(route.pts[i-1].tn+route.pts[i].tn)/2}); }
+  segs.sort((s,t)=>t.depth-s.depth);
+  rctx.lineCap="round";
+  for(const s of segs){ rctx.strokeStyle=ramp(s.tn); rctx.lineWidth=Math.max(2,5/s.depth);
+    rctx.beginPath(); rctx.moveTo(s.a.sx,s.a.sy); rctx.lineTo(s.b.sx,s.b.sy); rctx.stroke(); }
+  // marcadors inici/final
+  const s0=P.find(p=>p), s1=[...P].reverse().find(p=>p);
+  if(s0){ rctx.fillStyle="#4ED27A"; rctx.beginPath(); rctx.arc(s0.sx,s0.sy,7,0,7); rctx.fill(); }
+  if(s1){ rctx.fillStyle="#E8EEF4"; rctx.beginPath(); rctx.arc(s1.sx,s1.sy,7,0,7); rctx.fill();
+    rctx.strokeStyle="#0E1116"; rctx.lineWidth=2; rctx.stroke(); }
+}
+
+// --- interacció: orbitar (drag) i zoom (roda / pinça) ---
+let drag=null, pinch=null;
+r3d.addEventListener("pointerdown",e=>{ if(e.pointerType!=="touch"||!pinch){ drag={x:e.clientX,y:e.clientY}; r3d.setPointerCapture(e.pointerId);} });
+r3d.addEventListener("pointermove",e=>{ if(!drag||pinch)return;
+  cam.az+=(e.clientX-drag.x)*0.01; cam.el=Math.max(0.12,Math.min(1.5,cam.el-(e.clientY-drag.y)*0.008));
+  drag={x:e.clientX,y:e.clientY}; renderRoute(); });
+r3d.addEventListener("pointerup",()=>drag=null);
+r3d.addEventListener("pointercancel",()=>drag=null);
+r3d.addEventListener("wheel",e=>{ e.preventDefault();
+  cam.dist=Math.max(1.2,Math.min(8,cam.dist*(1+e.deltaY*0.0015))); renderRoute(); },{passive:false});
+r3d.addEventListener("touchmove",e=>{ if(e.touches.length===2){ e.preventDefault();
+  const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+  if(pinch) cam.dist=Math.max(1.2,Math.min(8,cam.dist*(pinch/d))); pinch=d; renderRoute(); } },{passive:false});
+r3d.addEventListener("touchend",e=>{ if(e.touches.length<2) pinch=null; });
+
+// --- càrrega de fonts ---
+$("btnLast").addEventListener("click",()=>{
+  if(!track||track.length<2){ toast("Encara no hi ha cap ruta gravada"); return; }
+  loadRoute(track.map(p=>({lat:p.lat,lon:p.lon,lean:p.lean,t:p.t}))); toast(track.length+" punts carregats");
+});
+$("gpxFile").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{ try{ const pts=parseGPX(rd.result); if(pts.length<2){toast("No s'han trobat punts al GPX");return;}
+    loadRoute(pts); toast(f.name+" · "+pts.length+" punts"); }catch(err){ toast("Error llegint el GPX"); } };
+  rd.readAsText(f); e.target.value="";
+});
+$("btnResetView").addEventListener("click",()=>{ cam.az=0.7; cam.el=0.95; cam.dist=2.9; renderRoute(); });
+window.addEventListener("resize",()=>{ if(!$("viewViewer").classList.contains("hidden")){ resizeR3D(); renderRoute(); } });
+
+loop();
+</script>
+
+<!-- ════════ Lògica Now Playing (Spotify) — 👉 posa el teu CLIENT_ID ════════ -->
 <script>
 const SPOTIFY = (() => {
-  // ──────────── CONFIGURA AIXÒ ────────────
+  // ──────────── CONFIGURA AIXÒ (el mateix Client ID que has provat) ────────────
   const CLIENT_ID = "e8382a5bdf954a7ab4550f26e5531b93";
-  // ─────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   const SCOPES   = "user-read-currently-playing user-read-playback-state";
-  // El redirect ha de coincidir EXACTAMENT amb el que registris al panell de Spotify.
-  // Fem servir l'URL actual sense paràmetres ni #.
   const REDIRECT = location.origin + location.pathname;
 
   const $ = id => document.getElementById(id);
   const ls = localStorage;
 
-  // ---- utils PKCE ----
   const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf)))
     .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-  async function sha256(str){
-    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  }
-  function makeVerifier(){
-    const a = new Uint8Array(64); crypto.getRandomValues(a);
-    return b64url(a.buffer);
-  }
+  const sha256 = str => crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  function makeVerifier(){ const a=new Uint8Array(64); crypto.getRandomValues(a); return b64url(a.buffer); }
 
-  // ---- login (redirigeix a Spotify) ----
   async function login(){
-    if(CLIENT_ID.startsWith("POSA_AQUI")){
-      alert("Falta posar el teu CLIENT_ID dins l'script.");
-      return;
-    }
-    const verifier = makeVerifier();
-    ls.setItem('sp_verifier', verifier);
+    if(CLIENT_ID.startsWith("POSA_AQUI")){ alert("Falta posar el teu CLIENT_ID dins l'script."); return; }
+    const verifier = makeVerifier(); ls.setItem('sp_verifier', verifier);
     const challenge = b64url(await sha256(verifier));
-    const p = new URLSearchParams({
-      client_id: CLIENT_ID, response_type:'code', redirect_uri: REDIRECT,
-      scope: SCOPES, code_challenge_method:'S256', code_challenge: challenge
-    });
+    const p = new URLSearchParams({ client_id:CLIENT_ID, response_type:'code', redirect_uri:REDIRECT,
+      scope:SCOPES, code_challenge_method:'S256', code_challenge:challenge });
     location.href = 'https://accounts.spotify.com/authorize?' + p.toString();
   }
-
-  // ---- tornada de Spotify amb ?code=... ----
   async function handleRedirect(){
-    const code = new URLSearchParams(location.search).get('code');
-    if(!code) return;
-    const verifier = ls.getItem('sp_verifier');
-    const body = new URLSearchParams({
-      client_id: CLIENT_ID, grant_type:'authorization_code', code,
-      redirect_uri: REDIRECT, code_verifier: verifier
-    });
+    const code = new URLSearchParams(location.search).get('code'); if(!code) return;
+    const body = new URLSearchParams({ client_id:CLIENT_ID, grant_type:'authorization_code', code,
+      redirect_uri:REDIRECT, code_verifier:ls.getItem('sp_verifier') });
     const r = await fetch('https://accounts.spotify.com/api/token',{
       method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body });
-    store(await r.json());
-    history.replaceState({}, '', REDIRECT); // neteja l'URL
+    store(await r.json()); history.replaceState({}, '', REDIRECT);
   }
-
-  function store(t){
-    if(!t || !t.access_token) return;
+  function store(t){ if(!t||!t.access_token) return;
     ls.setItem('sp_access', t.access_token);
-    ls.setItem('sp_expires', String(Date.now() + t.expires_in*1000 - 60000));
-    if(t.refresh_token) ls.setItem('sp_refresh', t.refresh_token);
-  }
-  async function refresh(){
-    const rt = ls.getItem('sp_refresh'); if(!rt) return false;
-    const body = new URLSearchParams({
-      client_id: CLIENT_ID, grant_type:'refresh_token', refresh_token: rt });
+    ls.setItem('sp_expires', String(Date.now()+t.expires_in*1000-60000));
+    if(t.refresh_token) ls.setItem('sp_refresh', t.refresh_token); }
+  async function refresh(){ const rt=ls.getItem('sp_refresh'); if(!rt) return false;
+    const body = new URLSearchParams({ client_id:CLIENT_ID, grant_type:'refresh_token', refresh_token:rt });
     const r = await fetch('https://accounts.spotify.com/api/token',{
       method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body });
-    store(await r.json());
-    return !!ls.getItem('sp_access');
-  }
-  async function token(){
-    if(!ls.getItem('sp_access')) return null;
-    if(Date.now() > (+ls.getItem('sp_expires')||0)){ await refresh(); }
-    return ls.getItem('sp_access');
-  }
+    store(await r.json()); return !!ls.getItem('sp_access'); }
+  async function token(){ if(!ls.getItem('sp_access')) return null;
+    if(Date.now() > (+ls.getItem('sp_expires')||0)) await refresh();
+    return ls.getItem('sp_access'); }
 
-  // ---- render de la franja ----
   function showConnect(){
-    $('npBar').classList.add('idle');
-    $('npConnect').classList.remove('npHidden');
-    $('npIcon').classList.add('npHidden');
-    $('npArt').style.backgroundImage='';
-    $('npTitle').textContent='No connectat a Spotify';
-    $('npArtist').textContent='Prem el botó per vincular el teu compte';
-    $('npProg').style.width='0';
+    $('npBar').classList.add('idle'); $('npConnect').classList.remove('npHidden');
+    $('npIcon').classList.add('npHidden'); $('npArt').style.backgroundImage='';
+    $('npTitle').textContent='Redirect URI (toca per copiar):';
+    $('npArtist').textContent=REDIRECT; $('npProg').style.width='0';
   }
   function showIdle(){
-    $('npBar').classList.add('idle');
-    $('npConnect').classList.add('npHidden');
-    $('npIcon').classList.remove('npHidden');
-    $('npArt').style.backgroundImage='';
+    $('npBar').classList.add('idle'); $('npConnect').classList.add('npHidden');
+    $('npIcon').classList.remove('npHidden'); $('npArt').style.backgroundImage='';
     $('npTitle').textContent='Res sonant ara mateix';
-    $('npArtist').textContent='Posa música a Spotify';
-    $('npProg').style.width='0';
+    $('npArtist').textContent='Posa música a Spotify'; $('npProg').style.width='0';
   }
   function render(d){
     if(!d || !d.item){ showIdle(); return; }
-    $('npBar').classList.remove('idle');
-    $('npConnect').classList.add('npHidden');
+    $('npBar').classList.remove('idle'); $('npConnect').classList.add('npHidden');
     $('npIcon').classList.remove('npHidden');
-    const it = d.item;
-    const art = it.album?.images?.slice(-1)[0]?.url || it.album?.images?.[0]?.url;
+    const it=d.item, art=it.album?.images?.slice(-1)[0]?.url || it.album?.images?.[0]?.url;
     $('npArt').style.backgroundImage = art ? `url("${art}")` : '';
     $('npTitle').textContent = it.name || '—';
     $('npArtist').textContent = (it.artists||[]).map(a=>a.name).join(', ') || '';
     const pct = it.duration_ms ? Math.min(100, 100*d.progress_ms/it.duration_ms) : 0;
     $('npProg').style.width = pct + '%';
   }
-
-  // ---- bucle de sondeig ----
   async function poll(){
-    const tk = await token();
-    if(!tk){ showConnect(); return; }
+    const tk = await token(); if(!tk){ showConnect(); return; }
     try{
       const r = await fetch('https://api.spotify.com/v1/me/player/currently-playing',{
         headers:{ Authorization:'Bearer '+tk } });
-      if(r.status===204){ showIdle(); return; }   // res reproduint-se
+      if(r.status===204){ showIdle(); return; }
       if(r.status===401){ await refresh(); return; }
       if(!r.ok) return;
       render(await r.json());
-    }catch(e){ /* xarxa: ignora i reintenta al següent tic */ }
+    }catch(e){}
   }
-
-  // ---- arrencada ----
   async function init(){
+    console.log('Redirect URI a registrar a Spotify →', REDIRECT);
     $('npConnect').addEventListener('click', login);
+    $('npMeta').addEventListener('click', () => {
+      navigator.clipboard?.writeText(REDIRECT)
+        .then(()=>alert('Copiat:\n'+REDIRECT)).catch(()=>alert(REDIRECT));
+    });
     await handleRedirect();
-    poll();
-    setInterval(poll, 5000);   // refresca cada 5 s
+    poll(); setInterval(poll, 5000);
   }
   return { init };
 })();
