@@ -213,7 +213,7 @@
   <div class="readout">
     <div class="lean-num"><span id="leanVal">0</span><span class="deg">°</span></div>
     <div class="lean-side" id="leanSide">anivellat</div>
-    <div class="src gpsonly" id="srcTxt">font: <b>acceleròmetre + GPS</b> · sense calibrar</div>
+    <div class="src gpsonly" id="srcTxt">font: <b>GPS</b> · sense calibrar</div>
   </div>
 </div>
 
@@ -331,6 +331,12 @@ function onFix(pos){
     if((c.speed==null||isNaN(c.speed)) && lastFixT!=null){
       const ddt=(now-lastFixT)/1000; if(ddt>0) v=dist/ddt;   // velocitat de reserva
     }
+    // GUARDA ANTI-PIC: si el GPS dona molta més velocitat que el desplaçament real,
+    // és soroll Doppler (típic en aturar-se → el fals "216 km/h"). L'ignorem.
+    if(lastFixT!=null){
+      const ddt=(now-lastFixT)/1000;
+      if(ddt>0){ const vDisp=dist/ddt; if(v > vDisp*1.8 + 4) v=vDisp; }
+    }
     if(dist>2.0) measHeading=bearing(lastLat,lastLon,c.latitude,c.longitude);
   }
   v=Math.min(v,60); speedMps=v;
@@ -397,12 +403,8 @@ function onMotion(e){
   motionAlive=true;
   if(demo) return;
 
-  // mòdul de l'acceleració (inclou gravetat) i el seu suavitzat (per detectar bots/frenades)
-  const aMag=len(acc);
-  aSmooth += (aMag-aSmooth)*0.12;
-  const jerk=Math.abs(aMag-aSmooth);
-
-  // --- GIROSCOPI: predicció ràpida (només si calibrat, que és quan sabem l'eix de roll) ---
+  // --- GIROSCOPI: integració ràpida al voltant de l'eix de roll (només si calibrat) ---
+  // Omple els buits entre fixos GPS (que arriben cada ~3 s) perquè l'horitzó vagi fluid.
   if(calibrated){
     const wb=sub(w,gyroBias);
     const rollRate=rollSign*dot(wb,rollAxis);          // deg/s al voltant de l'eix de marxa
@@ -410,25 +412,11 @@ function onMotion(e){
     rollAccum += rollRate*dts;                          // per a l'auto-signe
   }
 
-  // --- ACCELERÒMETRE: θ = acos(g/|a|), àncora absoluta a alta freqüència ---
-  let wAcc=0, leanAccSigned=0;
-  if(aMag>0){
-    const leanAccMag=Math.acos(Math.max(-1,Math.min(1,G/aMag)))/RAD;   // magnitud, sense signe
-    // signe: del valor actual (gir) o, si està molt dret, del GPS
-    const sgn = Math.abs(leanFused)>2 ? Math.sign(leanFused) : (Math.abs(leanGps)>2?Math.sign(leanGps):0);
-    leanAccSigned = sgn*leanAccMag;
-    // confiança: rang plausible · estat estacionari · poca accel longitudinal (frenada/gas)
-    const wRange = (aMag>=8.5 && aMag<=16)?1:0;
-    const wStead = Math.max(0,Math.min(1,1-jerk/4));
-    let wFA=1;
-    if(calibrated){ const fa=dot(acc,rollAxis); wFA=Math.max(0,Math.min(1,1-Math.abs(fa)/5)); }
-    wAcc = sgn===0 ? 0 : wRange*wStead*wFA;
-  }
-
-  // --- correccions cap a les dues àncores absolutes ---
-  const kAcc = 1.6*wAcc;                                  // acceleròmetre: ràpid quan és net
-  const kGps = speedMps>2.2 ? 0.30 : 1.4;                 // GPS: lent (1 Hz) / fort a l'aturada
-  leanFused += kAcc*(leanAccSigned-leanFused)*dts;
+  // --- EL GPS ÉS SEMPRE LA VERITAT ---
+  // Re-ancora fort cap a leanGps. El gir només dona resposta ràpida entre fixos i
+  // SEMPRE torna al que diu el GPS, així que mai pot quedar-se pla en una corba.
+  // Sense calibrar, aquest terme tot sol reprodueix la primera versió (GPS pur).
+  const kGps = calibrated ? 0.9 : 3.0;                 // /s — fort: convergeix en ~1 s
   leanFused += kGps*(leanGps-leanFused)*dts;
   if(leanFused>60)leanFused=60; if(leanFused<-60)leanFused=-60;
 }
@@ -485,7 +473,7 @@ function finishCal(){
     calibrated=true; signLocked=false; signCorr=0; signFixes=0; rollSign=1; rollAccum=0; prevLeanGps=leanGps;
     leanFused=leanGps;
     $("calSub").textContent="✓ calibrat"; $("btnCal").classList.add("ok");
-    $("srcTxt").classList.remove("gpsonly"); $("srcTxt").innerHTML='font: <b>gir + acceleròmetre + GPS</b>';
+    $("srcTxt").classList.remove("gpsonly"); $("srcTxt").innerHTML='font: <b>gir + GPS</b>';
     toast("Calibrat ✓ — fusió activa");
   } else {
     toast("Poc moviment detectat, torna-ho a provar");
@@ -765,7 +753,7 @@ loop();
 <script>
 const SPOTIFY = (() => {
   // ──────────── CONFIGURA AIXÒ (el mateix Client ID que has provat) ────────────
-  const CLIENT_ID = "e8382a5bdf954a7ab4550f26e5531b93";
+  const CLIENT_ID = "POSA_AQUI_EL_TEU_CLIENT_ID";
   // ─────────────────────────────────────────────────────────────────────────────
   const SCOPES   = "user-read-currently-playing user-read-playback-state";
   const REDIRECT = location.origin + location.pathname;
