@@ -194,7 +194,7 @@
 </div>
 
 <div class="topbar">
-  <div class="brand"><b>LEAN</b><span>angle</span><span style="font-size:9px;letter-spacing:.1em;color:var(--good);margin-left:6px;vertical-align:middle">v3·GPS</span></div>
+  <div class="brand"><b>LEAN</b><span>angle</span><span style="font-size:9px;letter-spacing:.1em;color:var(--good);margin-left:6px;vertical-align:middle">v4·GPS</span></div>
   <div class="topright">
     <span class="mini" id="demoToggle">Demo</span>
     <div class="gps"><span class="dot" id="gpsDot"></span><span id="gpsTxt">Sense GPS</span></div>
@@ -481,8 +481,11 @@ function loop(){
     const t=Date.now()/1000;
     leanFused=Math.sin(t*0.6)*38+Math.sin(t*1.7)*6;
     speedMps=14+Math.sin(t*0.3)*6;
-  } else if(!motionAlive){
-    leanFused += (leanGps-leanFused)*0.12;  // sense IMU: només GPS, suavitzat
+  } else {
+    // L'IMU compta com a "viu" només si ha donat senyal fa <400 ms. Si calla (iOS el
+    // talla amb la pantalla fosca), el GPS torna a portar leanFused, sense quedar penjat.
+    const imuLive = lastMotionT!=null && (performance.now()-lastMotionT < 400);
+    if(!imuLive) leanFused += (leanGps-leanFused)*0.18;   // GPS mana quan no hi ha IMU
   }
   leanShown += (leanFused-leanShown)*0.35;
 
