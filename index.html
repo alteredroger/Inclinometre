@@ -194,7 +194,7 @@
 </div>
 
 <div class="topbar">
-  <div class="brand"><b>LEAN</b><span>angle</span><span style="font-size:9px;letter-spacing:.1em;color:var(--good);margin-left:6px;vertical-align:middle">v2·GPS</span></div>
+  <div class="brand"><b>LEAN</b><span>angle</span><span style="font-size:9px;letter-spacing:.1em;color:var(--good);margin-left:6px;vertical-align:middle">v3·GPS</span></div>
   <div class="topright">
     <span class="mini" id="demoToggle">Demo</span>
     <div class="gps"><span class="dot" id="gpsDot"></span><span id="gpsTxt">Sense GPS</span></div>
@@ -269,6 +269,7 @@ const unit=a=>{const m=len(a)||1;return [a[0]/m,a[1]/m,a[2]/m];};
 // ---- estat ----
 let running=false, demo=false, recording=false, calibrated=false;
 let lastLat=null,lastLon=null,lastHeading=null,lastFixT=null;
+let anchorLat=null,anchorLon=null,anchorT=null;   // àncora de rumb (només avança si t'has mogut >3m)
 let speedMps=0;
 let leanGps=0;          // referència absoluta (GPS), graus, + = dreta
 let leanFused=0;        // valor mostrat (gir + GPS)
@@ -322,40 +323,33 @@ function onFix(pos){
   // velocitat: del GPS si hi és, amb sostre per filtrar pics
   let v=(c.speed!=null && !isNaN(c.speed))?c.speed:speedMps;
 
-  // RUMB DES DE LA POSICIÓ: coords.heading del navegador no és fiable (es queda quiet).
-  // El recalculem amb el desplaçament entre fixos i fem una porta de distància per
-  // descartar el rumb-soroll quan estàs gairebé aturat.
-  let measHeading=null;
-  if(lastLat!=null){
-    const dist=haversine(lastLat,lastLon,c.latitude,c.longitude);
-    if((c.speed==null||isNaN(c.speed)) && lastFixT!=null){
-      const ddt=(now-lastFixT)/1000; if(ddt>0) v=dist/ddt;   // velocitat de reserva
-    }
-    // GUARDA ANTI-PIC: si el GPS dona molta més velocitat que el desplaçament real,
-    // és soroll Doppler (típic en aturar-se → el fals "216 km/h"). L'ignorem.
-    if(lastFixT!=null){
-      const ddt=(now-lastFixT)/1000;
-      if(ddt>0){ const vDisp=dist/ddt; if(v > vDisp*1.8 + 4) v=vDisp; }
-    }
-    if(dist>2.0) measHeading=bearing(lastLat,lastLon,c.latitude,c.longitude);
-  }
-  v=Math.min(v,60); speedMps=v;
-
-  if(measHeading!=null){
-    if(cogHeading==null){ cogHeading=measHeading; }
-    else if(lastFixT!=null){
-      const dt=(now-lastFixT)/1000;
-      let d=measHeading-cogHeading; while(d>180)d-=360; while(d<-180)d+=360;
-      cogHeading=(cogHeading+0.5*d+360)%360;                 // suavitza el rumb
-      if(dt>0.05){
-        const yaw=(0.5*d*RAD)/dt, aLat=v*yaw;                // ω = canvi de rumb / temps
-        let L=Math.atan2(aLat,G)/RAD;
+  // RUMB AMB ÀNCORA: el GPS dispara onFix més sovint que no canvia la posició real
+  // (iOS repeteix coordenades). Per això NO comparem amb l'última crida, sinó amb una
+  // àncora que només avança quan t'has mogut de debò (>3 m). Així el rumb es calcula
+  // sobre una base real i el temps (dt) és el de veritat, no el de 0,1 s entre crides.
+  if(anchorLat==null){ anchorLat=c.latitude; anchorLon=c.longitude; anchorT=now; }
+  else{
+    const dist=haversine(anchorLat,anchorLon,c.latitude,c.longitude);
+    const ddt=(now-anchorT)/1000;
+    if((c.speed==null||isNaN(c.speed)) && ddt>0) v=dist/ddt;          // velocitat de reserva
+    if(ddt>0){ const vDisp=dist/ddt; if(v > vDisp*1.8 + 4) v=vDisp; } // guarda anti-pic Doppler
+    if(dist>3.0 && ddt>0.05){
+      const measHeading=bearing(anchorLat,anchorLon,c.latitude,c.longitude);
+      if(cogHeading==null){ cogHeading=measHeading; }
+      else{
+        let d=measHeading-cogHeading; while(d>180)d-=360; while(d<-180)d+=360;
+        cogHeading=(cogHeading+0.5*d+360)%360;                        // suavitza el rumb
+        const yaw=(0.5*d*RAD)/ddt, aLat=v*yaw;                        // ω = canvi de rumb / temps real
+        const L=Math.atan2(aLat,G)/RAD;
         leanGps = v>2.2 ? Math.max(-50,Math.min(50,L)) : 0;
       }
+      anchorLat=c.latitude; anchorLon=c.longitude; anchorT=now;       // avança l'àncora NOMÉS quan s'ha fet servir
+    } else if(v<2.2){
+      leanGps=0;                                                      // aturat → recte
     }
-  } else {
-    leanGps=0;   // aturat o moviment insuficient → no hi ha corba
+    // si dist<3 i encara en moviment: mantenim leanGps (no l'aixafem)
   }
+  v=Math.min(v,60); speedMps=v;
   lastLat=c.latitude; lastLon=c.longitude; lastFixT=now;
 
   // auto-signe del roll: el gir integrat ha de coincidir amb el canvi de lean del GPS
@@ -555,7 +549,7 @@ function recordSample(){
     const t=Date.now()/1000; lat=41.387+Math.sin(t*0.05)*0.01; lon=2.17+Math.cos(t*0.05)*0.01;
   }
   if(lat==null||lon==null) return;
-  track.push({t:Date.now(),lat,lon,spd:speedMps,head:cogHeading||0,lean:leanFused});
+  track.push({t:Date.now(),lat,lon,spd:speedMps,head:cogHeading||0,lean:leanFused,lgps:leanGps});
   $("recSub").textContent=track.length+" punts";
 }
 
@@ -577,7 +571,7 @@ $("btnExport").addEventListener("click", ()=>{
 function toCSV(t){let s="timestamp,lat,lon,speed_kmh,heading,lean_deg\n";
   for(const p of t)s+=`${new Date(p.t).toISOString()},${p.lat.toFixed(6)},${p.lon.toFixed(6)},${(p.spd*3.6).toFixed(1)},${p.head.toFixed(1)},${p.lean.toFixed(1)}\n`;return s;}
 function toGPX(t){let s=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Inclinometre Moto" xmlns="http://www.topografix.com/GPX/1/1">\n<trk><name>Ruta moto</name><trkseg>\n`;
-  for(const p of t)s+=`<trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}"><time>${new Date(p.t).toISOString()}</time><extensions><lean>${p.lean.toFixed(1)}</lean><speed>${p.spd.toFixed(2)}</speed></extensions></trkpt>\n`;
+  for(const p of t)s+=`<trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}"><time>${new Date(p.t).toISOString()}</time><extensions><lean>${p.lean.toFixed(1)}</lean><speed>${p.spd.toFixed(2)}</speed><leanGps>${(p.lgps!=null?p.lgps:0).toFixed(1)}</leanGps></extensions></trkpt>\n`;
   s+=`</trkseg></trk></gpx>`;return s;}
 function download(name,content,type){const a=document.createElement("a");
   a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();
@@ -753,7 +747,7 @@ loop();
 <script>
 const SPOTIFY = (() => {
   // ──────────── CONFIGURA AIXÒ (el mateix Client ID que has provat) ────────────
-  const CLIENT_ID = "e8382a5bdf954a7ab4550f26e5531b93";
+  const CLIENT_ID = "POSA_AQUI_EL_TEU_CLIENT_ID";
   // ─────────────────────────────────────────────────────────────────────────────
   const SCOPES   = "user-read-currently-playing user-read-playback-state";
   const REDIRECT = location.origin + location.pathname;
