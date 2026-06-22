@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0E0F12">
+<title>Inclinòmetre · OS</title>
+<style>
+  :root{
+    --bg:#0E0F12; --surface:#16181D; --line:#23262E;
+    --ink:#EAECEF; --muted:#7C828D;
+    --sky:#1C3A52; --ground:#241B16;
+    --g0:#4ADE80; --g1:#FFB000; --g2:#FF7A00; --g3:#FF3B30;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    overflow:hidden; user-select:none; -webkit-user-select:none;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum";}
+
+  /* ---- pantalla de permís ---- */
+  #gate{
+    position:fixed; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:28px; text-align:center; padding:32px;
+  }
+  #gate h1{font-size:26px; font-weight:800; letter-spacing:-.02em; margin:0;}
+  #gate p{color:var(--muted); font-size:15px; line-height:1.5; max-width:300px; margin:0;}
+  .btn{
+    border:none; border-radius:14px; padding:16px 28px; font-size:17px; font-weight:700;
+    background:var(--g1); color:#1A1300; cursor:pointer; transition:transform .08s ease;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn.ghost{background:var(--surface); color:var(--ink); border:1px solid var(--line); font-weight:600;}
+  #err{color:var(--g3); font-size:14px; min-height:18px; max-width:300px;}
+
+  /* ---- app ---- */
+  #app{display:none; height:100%; flex-direction:column;}
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px; border-bottom:1px solid var(--line);
+  }
+  .badge{
+    font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--muted);
+    border:1px solid var(--line); border-radius:999px; padding:4px 10px; text-transform:uppercase;
+  }
+  .stage{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-height:0;}
+
+  .dial{position:relative; width:min(78vw,300px); aspect-ratio:1; }
+  .dial svg{width:100%; height:100%; display:block;}
+  .readout{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    pointer-events:none;
+  }
+  #lean{font-size:64px; font-weight:800; line-height:.9; letter-spacing:-.03em; transition:color .15s ease;}
+  #side{font-size:13px; font-weight:700; letter-spacing:.18em; color:var(--muted); margin-top:6px;}
+
+  .maxes{display:flex; gap:12px; margin-top:6px;}
+  .chip{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    padding:10px 16px; min-width:96px; text-align:center;
+  }
+  .chip .lbl{font-size:10px; letter-spacing:.14em; color:var(--muted); text-transform:uppercase;}
+  .chip .val{font-size:24px; font-weight:800; margin-top:2px;}
+
+  footer{display:flex; gap:12px; padding:14px 18px 18px; border-top:1px solid var(--line);}
+  footer .btn{flex:1; padding:15px 0; font-size:16px;}
+  .hint{position:fixed; left:0; right:0; bottom:84px; text-align:center; color:var(--muted); font-size:12px;}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h1>Inclinòmetre</h1>
+  <p>Mesura la inclinació de la moto a partir de l'actitud del telèfon. Munta el mòbil, prem comença i calibra amb la moto recta.</p>
+  <button class="btn" id="startBtn">Comença</button>
+  <div id="err"></div>
+</div>
+
+<div id="app">
+  <header>
+    <span class="badge">v1 · OS attitude</span>
+    <span class="badge" id="hz">— Hz</span>
+  </header>
+
+  <div class="stage">
+    <div class="dial">
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <defs>
+          <clipPath id="c"><circle cx="100" cy="100" r="92"/></clipPath>
+        </defs>
+        <!-- món que gira (horitzó) -->
+        <g clip-path="url(#c)">
+          <g id="world">
+            <rect x="-140" y="-140" width="480" height="240" fill="var(--sky)"/>
+            <rect x="-140" y="100" width="480" height="240" fill="var(--ground)"/>
+            <line x1="-140" y1="100" x2="340" y2="100" stroke="#9AA3AE" stroke-width="2"/>
+            <!-- escala de capcineig discreta -->
+            <line x1="80" y1="70" x2="120" y2="70" stroke="#46505c" stroke-width="1.5"/>
+            <line x1="86" y1="130" x2="114" y2="130" stroke="#46505c" stroke-width="1.5"/>
+          </g>
+        </g>
+        <!-- anell -->
+        <circle cx="100" cy="100" r="92" fill="none" stroke="var(--line)" stroke-width="3"/>
+        <!-- marcador central fix (la moto) -->
+        <g stroke="var(--g1)" stroke-width="3" stroke-linecap="round" fill="none">
+          <line x1="62" y1="100" x2="84" y2="100"/>
+          <line x1="116" y1="100" x2="138" y2="100"/>
+          <circle cx="100" cy="100" r="2.5" fill="var(--g1)" stroke="none"/>
+        </g>
+        <!-- punter superior fix -->
+        <path d="M100 8 l7 13 h-14 z" fill="var(--ink)"/>
+      </svg>
+      <div class="readout">
+        <div id="lean" class="num">0°</div>
+        <div id="side">RECTE</div>
+      </div>
+    </div>
+
+    <div class="maxes">
+      <div class="chip"><div class="lbl">Màx esquerra</div><div class="val num" id="maxL" style="color:var(--g1)">0°</div></div>
+      <div class="chip"><div class="lbl">Màx dreta</div><div class="val num" id="maxR" style="color:var(--g1)">0°</div></div>
+    </div>
+  </div>
+
+  <div class="hint" id="hint"></div>
+
+  <footer>
+    <button class="btn" id="calBtn">Calibrar zero</button>
+    <button class="btn ghost" id="resetBtn">Esborrar màx</button>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var D2R = Math.PI/180, R2D = 180/Math.PI;
+
+  // estat
+  var rollZero = 0, lastRoll = 0, leanSmooth = 0;
+  var maxL = 0, maxR = 0;          // esquerra negatiu, dreta positiu
+  var haveData = false, evCount = 0;
+
+  var el = function(id){ return document.getElementById(id); };
+  var gate=el("gate"), app=el("app"), errBox=el("err"), hint=el("hint");
+  var leanEl=el("lean"), sideEl=el("side"), maxLEl=el("maxL"), maxREl=el("maxR");
+  var world=el("world"), hzEl=el("hz");
+
+  // ---- arrencada + permís (iOS 13+ demana permís en un gest) ----
+  function start(){
+    errBox.textContent="";
+    var needPerm = (typeof DeviceOrientationEvent!=="undefined" &&
+                    typeof DeviceOrientationEvent.requestPermission==="function");
+    if(needPerm){
+      DeviceOrientationEvent.requestPermission().then(function(res){
+        if(res==="granted"){ begin(); }
+        else { errBox.textContent="Permís denegat. Recarrega i torna-ho a provar."; }
+      }).catch(function(e){
+        errBox.textContent="No s'ha pogut demanar permís: "+e.message+" (cal HTTPS).";
+      });
+    } else {
+      begin();
+    }
+  }
+
+  function begin(){
+    window.addEventListener("deviceorientation", onOrient, true);
+    gate.style.display="none";
+    app.style.display="flex";
+    // si en 2s no arriba res, avisem
+    setTimeout(function(){
+      if(!haveData){
+        hint.textContent="No arriben dades del sensor. Obre la pàgina amb https:// (no com a fitxer local).";
+      }
+    },2000);
+  }
+
+  // ---- lectura de l'actitud ----
+  function onOrient(e){
+    if(e.beta===null || e.gamma===null) return;
+    haveData=true; evCount++;
+    var b = e.beta*D2R, g = e.gamma*D2R;
+    // vector gravetat dins el telèfon a partir de beta/gamma
+    var gx = -Math.sin(g);
+    var gy =  Math.cos(g)*Math.sin(b);
+    // "roll": direcció de la gravetat dins el pla de la pantalla
+    lastRoll = Math.atan2(gx, gy)*R2D;
+    var lean = norm(lastRoll - rollZero);
+    // suavitzat lleuger
+    leanSmooth += (lean - leanSmooth)*0.25;
+    render(leanSmooth);
+  }
+
+  function norm(a){ return ((a+180)%360+360)%360-180; }
+
+  function colorFor(mag){
+    if(mag<15) return getCss("--g0");
+    if(mag<30) return getCss("--g1");
+    if(mag<45) return getCss("--g2");
+    return getCss("--g3");
+  }
+  function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+  function render(lean){
+    var mag = Math.abs(lean);
+    var col = colorFor(mag);
+    leanEl.textContent = Math.round(mag)+"°";
+    leanEl.style.color = col;
+    sideEl.textContent = mag<1 ? "RECTE" : (lean<0 ? "◄ ESQUERRA" : "DRETA ►");
+    // l'horitzó gira al contrari de la inclinació
+    world.setAttribute("transform","rotate("+(-lean)+" 100 100)");
+    // màxims
+    if(lean < maxL){ maxL = lean; maxLEl.textContent = Math.round(-maxL)+"°"; maxLEl.style.color=colorFor(Math.abs(maxL)); }
+    if(lean > maxR){ maxR = lean; maxREl.textContent = Math.round(maxR)+"°"; maxREl.style.color=colorFor(Math.abs(maxR)); }
+  }
+
+  // freqüència aproximada cada segon
+  setInterval(function(){ if(haveData){ hzEl.textContent = evCount+" Hz"; evCount=0; } },1000);
+
+  // ---- botons ----
+  el("startBtn").addEventListener("click", start);
+  el("calBtn").addEventListener("click", function(){
+    rollZero = lastRoll; leanSmooth = 0; render(0);
+    hint.textContent="Zero calibrat.";
+    setTimeout(function(){ if(hint.textContent==="Zero calibrat.") hint.textContent=""; },1500);
+  });
+  el("resetBtn").addEventListener("click", function(){
+    maxL=0; maxR=0; maxLEl.textContent="0°"; maxREl.textContent="0°";
+    maxLEl.style.color=getCss("--g1"); maxREl.style.color=getCss("--g1");
+  });
+})();
+</script>
+</body>
+</html>
