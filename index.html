@@ -11,6 +11,7 @@
     --ink:#EAECEF; --muted:#7C828D;
     --sky:#1C3A52; --ground:#241B16;
     --g0:#4ADE80; --g1:#FFB000; --g2:#FF7A00; --g3:#FF3B30;
+    --rec:#FF3B30;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0;height:100%;}
@@ -22,96 +23,111 @@
   }
   .num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum";}
 
-  /* ---- pantalla de permís ---- */
-  #gate{
-    position:fixed; inset:0; display:flex; flex-direction:column;
-    align-items:center; justify-content:center; gap:28px; text-align:center; padding:32px;
-  }
+  /* ---- permís ---- */
+  #gate{position:fixed; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:28px; text-align:center; padding:32px; z-index:20;}
   #gate h1{font-size:26px; font-weight:800; letter-spacing:-.02em; margin:0;}
   #gate p{color:var(--muted); font-size:15px; line-height:1.5; max-width:300px; margin:0;}
-  .btn{
-    border:none; border-radius:14px; padding:16px 28px; font-size:17px; font-weight:700;
-    background:var(--g1); color:#1A1300; cursor:pointer; transition:transform .08s ease;
-  }
-  .btn:active{transform:scale(.97);}
-  .btn.ghost{background:var(--surface); color:var(--ink); border:1px solid var(--line); font-weight:600;}
   #err{color:var(--g3); font-size:14px; min-height:18px; max-width:300px;}
 
-  /* ---- app ---- */
-  #app{display:none; height:100%; flex-direction:column;}
-  header{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:14px 18px; border-bottom:1px solid var(--line);
-  }
-  .badge{
-    font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--muted);
-    border:1px solid var(--line); border-radius:999px; padding:4px 10px; text-transform:uppercase;
-  }
-  .stage{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-height:0;}
+  .btn{border:none; border-radius:14px; padding:16px 20px; font-size:16px; font-weight:700;
+    background:var(--g1); color:#1A1300; cursor:pointer; transition:transform .08s ease;}
+  .btn:active{transform:scale(.97);}
+  .btn.ghost{background:var(--surface); color:var(--ink); border:1px solid var(--line); font-weight:600;}
+  .btn.rec{background:var(--rec); color:#fff;}
+  .btn.danger{color:var(--g3);}
 
-  .dial{position:relative; width:min(78vw,300px); aspect-ratio:1; }
+  /* ---- pantalles ---- */
+  .screen{display:none; height:100%; flex-direction:column;}
+  .screen.active{display:flex;}
+  header{display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:14px 16px; border-bottom:1px solid var(--line); min-height:54px;}
+  .badge{font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--muted);
+    border:1px solid var(--line); border-radius:999px; padding:4px 10px; text-transform:uppercase;}
+  .navbtn{background:none; border:none; color:var(--ink); font-size:15px; font-weight:600; padding:6px 4px; cursor:pointer;}
+  .htitle{font-size:15px; font-weight:700;}
+
+  /* ---- live ---- */
+  .stage{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-height:0;}
+  .dial{position:relative; width:min(72vw,280px); aspect-ratio:1;}
   .dial svg{width:100%; height:100%; display:block;}
-  .readout{
-    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    pointer-events:none;
-  }
-  #lean{font-size:64px; font-weight:800; line-height:.9; letter-spacing:-.03em; transition:color .15s ease;}
-  #side{font-size:13px; font-weight:700; letter-spacing:.18em; color:var(--muted); margin-top:6px;}
-
-  .maxes{display:flex; gap:12px; margin-top:6px;}
-  .chip{
-    background:var(--surface); border:1px solid var(--line); border-radius:12px;
-    padding:10px 16px; min-width:96px; text-align:center;
-  }
+  .readout{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none;}
+  #lean{font-size:60px; font-weight:800; line-height:.9; letter-spacing:-.03em; transition:color .15s ease;}
+  #side{font-size:12px; font-weight:700; letter-spacing:.18em; color:var(--muted); margin-top:6px;}
+  .maxes{display:flex; gap:12px;}
+  .chip{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:9px 16px; min-width:92px; text-align:center;}
   .chip .lbl{font-size:10px; letter-spacing:.14em; color:var(--muted); text-transform:uppercase;}
-  .chip .val{font-size:24px; font-weight:800; margin-top:2px;}
+  .chip .val{font-size:22px; font-weight:800; margin-top:2px; color:var(--g1);}
+  .hint{text-align:center; color:var(--muted); font-size:12px; min-height:16px; padding:0 16px;}
+  .recbar{display:none; align-items:center; justify-content:center; gap:8px; color:var(--rec);
+    font-weight:700; font-size:14px; padding:6px;}
+  .recbar.on{display:flex;}
+  .dot{width:10px; height:10px; border-radius:50%; background:var(--rec); animation:pulse 1s infinite;}
+  @keyframes pulse{50%{opacity:.25;}}
 
-  footer{display:flex; gap:12px; padding:14px 18px 18px; border-top:1px solid var(--line);}
-  footer .btn{flex:1; padding:15px 0; font-size:16px;}
-  .hint{position:fixed; left:0; right:0; bottom:84px; text-align:center; color:var(--muted); font-size:12px;}
+  footer{padding:12px 16px 16px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:10px;}
+  footer .row2{display:flex; gap:10px;}
+  footer .row2 .btn{flex:1;}
+
+  /* ---- llista rutes ---- */
+  .list{flex:1; overflow-y:auto; padding:12px 16px; display:flex; flex-direction:column; gap:10px;}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px 16px; cursor:pointer;}
+  .card:active{transform:scale(.99);}
+  .card .cname{font-size:15px; font-weight:700;}
+  .card .cmeta{font-size:13px; color:var(--muted); margin-top:4px;}
+  .card .cmeta b{color:var(--ink); font-weight:700;}
+  .empty{flex:1; display:flex; align-items:center; justify-content:center; color:var(--muted); text-align:center; padding:32px; font-size:15px;}
+
+  /* ---- detall ---- */
+  .detbody{flex:1; display:flex; flex-direction:column; min-height:0; padding:14px 16px; gap:14px;}
+  .mapwrap{flex:1; min-height:0; position:relative; background:#0A0B0E; border:1px solid var(--line); border-radius:14px; overflow:hidden;}
+  #map{position:absolute; inset:0;}
+  .legend{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--muted);}
+  .legend .bar{flex:1; height:10px; border-radius:6px;
+    background:linear-gradient(to right,#4ADE80,#FFD000,#FF7A00,#FF3B30);}
+  .stats{display:flex; gap:10px;}
+  .stats .s{flex:1; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:10px; text-align:center;}
+  .stats .s .l{font-size:10px; letter-spacing:.12em; color:var(--muted); text-transform:uppercase;}
+  .stats .s .v{font-size:19px; font-weight:800; margin-top:3px;}
 </style>
 </head>
 <body>
 
+<!-- ===== PERMÍS ===== -->
 <div id="gate">
   <h1>Inclinòmetre</h1>
-  <p>Mesura la inclinació de la moto a partir de l'actitud del telèfon. Munta el mòbil, prem comença i calibra amb la moto recta.</p>
+  <p>Munta el mòbil, prem comença i calibra amb la moto recta. Grava la ruta i mira després on t'has tombat més.</p>
   <button class="btn" id="startBtn">Comença</button>
   <div id="err"></div>
 </div>
 
-<div id="app">
+<!-- ===== LIVE ===== -->
+<div id="live" class="screen">
   <header>
-    <span class="badge">v1 · OS attitude</span>
+    <span class="badge">v2 · OS</span>
     <span class="badge" id="hz">— Hz</span>
+    <button class="navbtn" id="toRoutes">Rutes ›</button>
   </header>
 
   <div class="stage">
     <div class="dial">
       <svg viewBox="0 0 200 200" aria-hidden="true">
-        <defs>
-          <clipPath id="c"><circle cx="100" cy="100" r="92"/></clipPath>
-        </defs>
-        <!-- món que gira (horitzó) -->
+        <defs><clipPath id="c"><circle cx="100" cy="100" r="92"/></clipPath></defs>
         <g clip-path="url(#c)">
           <g id="world">
             <rect x="-140" y="-140" width="480" height="240" fill="var(--sky)"/>
             <rect x="-140" y="100" width="480" height="240" fill="var(--ground)"/>
             <line x1="-140" y1="100" x2="340" y2="100" stroke="#9AA3AE" stroke-width="2"/>
-            <!-- escala de capcineig discreta -->
             <line x1="80" y1="70" x2="120" y2="70" stroke="#46505c" stroke-width="1.5"/>
             <line x1="86" y1="130" x2="114" y2="130" stroke="#46505c" stroke-width="1.5"/>
           </g>
         </g>
-        <!-- anell -->
         <circle cx="100" cy="100" r="92" fill="none" stroke="var(--line)" stroke-width="3"/>
-        <!-- marcador central fix (la moto) -->
         <g stroke="var(--g1)" stroke-width="3" stroke-linecap="round" fill="none">
           <line x1="62" y1="100" x2="84" y2="100"/>
           <line x1="116" y1="100" x2="138" y2="100"/>
           <circle cx="100" cy="100" r="2.5" fill="var(--g1)" stroke="none"/>
         </g>
-        <!-- punter superior fix -->
         <path d="M100 8 l7 13 h-14 z" fill="var(--ink)"/>
       </svg>
       <div class="readout">
@@ -119,118 +135,296 @@
         <div id="side">RECTE</div>
       </div>
     </div>
-
     <div class="maxes">
-      <div class="chip"><div class="lbl">Màx esquerra</div><div class="val num" id="maxL" style="color:var(--g1)">0°</div></div>
-      <div class="chip"><div class="lbl">Màx dreta</div><div class="val num" id="maxR" style="color:var(--g1)">0°</div></div>
+      <div class="chip"><div class="lbl">Màx esq</div><div class="val num" id="maxL">0°</div></div>
+      <div class="chip"><div class="lbl">Màx dre</div><div class="val num" id="maxR">0°</div></div>
     </div>
+    <div class="hint" id="hint"></div>
   </div>
 
-  <div class="hint" id="hint"></div>
+  <div class="recbar" id="recbar"><span class="dot"></span><span id="recTxt">REC</span></div>
 
   <footer>
-    <button class="btn" id="calBtn">Calibrar zero</button>
-    <button class="btn ghost" id="resetBtn">Esborrar màx</button>
+    <button class="btn rec" id="recBtn">● Gravar ruta</button>
+    <div class="row2">
+      <button class="btn ghost" id="calBtn">Calibrar zero</button>
+      <button class="btn ghost" id="resetBtn">Esborrar màx</button>
+    </div>
+  </footer>
+</div>
+
+<!-- ===== LLISTA RUTES ===== -->
+<div id="routes" class="screen">
+  <header>
+    <button class="navbtn" id="backLive">‹ Enrere</button>
+    <span class="htitle">Rutes</span>
+    <span style="width:56px"></span>
+  </header>
+  <div class="list" id="routeList"></div>
+</div>
+
+<!-- ===== DETALL ===== -->
+<div id="detail" class="screen">
+  <header>
+    <button class="navbtn" id="backRoutes">‹ Rutes</button>
+    <span class="htitle" id="detTitle"></span>
+    <span style="width:56px"></span>
+  </header>
+  <div class="detbody">
+    <div class="mapwrap"><canvas id="map"></canvas></div>
+    <div class="legend"><span>0°</span><span class="bar"></span><span id="legMax">0°</span></div>
+    <div class="stats" id="detStats"></div>
+  </div>
+  <footer>
+    <div class="row2">
+      <button class="btn ghost" id="gpxBtn">Exportar GPX</button>
+      <button class="btn ghost danger" id="delBtn">Esborrar ruta</button>
+    </div>
   </footer>
 </div>
 
 <script>
 (function(){
   "use strict";
-  var D2R = Math.PI/180, R2D = 180/Math.PI;
+  var D2R=Math.PI/180, R2D=180/Math.PI;
+  var el=function(id){return document.getElementById(id);};
 
-  // estat
-  var rollZero = 0, lastRoll = 0, leanSmooth = 0;
-  var maxL = 0, maxR = 0;          // esquerra negatiu, dreta positiu
-  var haveData = false, evCount = 0;
+  // ---------- estat actitud ----------
+  var rollZero=0, lastRoll=0, leanSmooth=0, maxL=0, maxR=0;
+  var haveData=false, evCount=0, apexSinceFix=0;
 
-  var el = function(id){ return document.getElementById(id); };
-  var gate=el("gate"), app=el("app"), errBox=el("err"), hint=el("hint");
-  var leanEl=el("lean"), sideEl=el("side"), maxLEl=el("maxL"), maxREl=el("maxR");
-  var world=el("world"), hzEl=el("hz");
+  // ---------- gravació ----------
+  var recording=false, recStart=0, recSamples=[], watchId=null, recTimer=null, lastFix=null;
 
-  // ---- arrencada + permís (iOS 13+ demana permís en un gest) ----
+  // ---------- rutes (persistència segura) ----------
+  var store={
+    load:function(){ try{ var s=localStorage.getItem("rutes"); return s?JSON.parse(s):[]; }catch(e){ return null; } },
+    save:function(r){ try{ localStorage.setItem("rutes",JSON.stringify(r)); return true; }catch(e){ return false; } }
+  };
+  var routes = store.load() || [];
+  var persistent = store.load()!==null;
+
+  // ================= NAVEGACIÓ =================
+  function show(name){
+    ["live","routes","detail"].forEach(function(s){ el(s).classList.toggle("active", s===name); });
+  }
+
+  // ================= ARRENCADA / PERMÍS =================
   function start(){
-    errBox.textContent="";
-    var needPerm = (typeof DeviceOrientationEvent!=="undefined" &&
-                    typeof DeviceOrientationEvent.requestPermission==="function");
+    el("err").textContent="";
+    var needPerm=(typeof DeviceOrientationEvent!=="undefined" &&
+                  typeof DeviceOrientationEvent.requestPermission==="function");
     if(needPerm){
       DeviceOrientationEvent.requestPermission().then(function(res){
-        if(res==="granted"){ begin(); }
-        else { errBox.textContent="Permís denegat. Recarrega i torna-ho a provar."; }
-      }).catch(function(e){
-        errBox.textContent="No s'ha pogut demanar permís: "+e.message+" (cal HTTPS).";
-      });
-    } else {
-      begin();
-    }
+        if(res==="granted") begin();
+        else el("err").textContent="Permís denegat. Recarrega i torna-ho a provar.";
+      }).catch(function(e){ el("err").textContent="No s'ha pogut demanar permís: "+e.message+" (cal HTTPS)."; });
+    } else begin();
   }
-
   function begin(){
     window.addEventListener("deviceorientation", onOrient, true);
-    gate.style.display="none";
-    app.style.display="flex";
-    // si en 2s no arriba res, avisem
-    setTimeout(function(){
-      if(!haveData){
-        hint.textContent="No arriben dades del sensor. Obre la pàgina amb https:// (no com a fitxer local).";
-      }
-    },2000);
+    el("gate").style.display="none";
+    show("live");
+    setTimeout(function(){ if(!haveData) el("hint").textContent="No arriben dades del sensor. Obre la pàgina amb https:// (no com a fitxer local)."; },2000);
   }
 
-  // ---- lectura de l'actitud ----
+  // ================= ACTITUD =================
   function onOrient(e){
-    if(e.beta===null || e.gamma===null) return;
+    if(e.beta===null||e.gamma===null) return;
     haveData=true; evCount++;
-    var b = e.beta*D2R, g = e.gamma*D2R;
-    // vector gravetat dins el telèfon a partir de beta/gamma
-    var gx = -Math.sin(g);
-    var gy =  Math.cos(g)*Math.sin(b);
-    // "roll": direcció de la gravetat dins el pla de la pantalla
-    lastRoll = Math.atan2(gx, gy)*R2D;
-    var lean = norm(lastRoll - rollZero);
-    // suavitzat lleuger
-    leanSmooth += (lean - leanSmooth)*0.25;
+    var b=e.beta*D2R, g=e.gamma*D2R;
+    var gx=-Math.sin(g), gy=Math.cos(g)*Math.sin(b);
+    lastRoll=Math.atan2(gx,gy)*R2D;
+    var lean=norm(lastRoll-rollZero);
+    leanSmooth += (lean-leanSmooth)*0.25;
+    if(recording){ var a=Math.abs(leanSmooth); if(a>apexSinceFix) apexSinceFix=a; }
     render(leanSmooth);
   }
-
   function norm(a){ return ((a+180)%360+360)%360-180; }
-
-  function colorFor(mag){
-    if(mag<15) return getCss("--g0");
-    if(mag<30) return getCss("--g1");
-    if(mag<45) return getCss("--g2");
-    return getCss("--g3");
-  }
-  function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+  function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+  function colorStep(mag){ return mag<15?css("--g0"):mag<30?css("--g1"):mag<45?css("--g2"):css("--g3"); }
 
   function render(lean){
-    var mag = Math.abs(lean);
-    var col = colorFor(mag);
-    leanEl.textContent = Math.round(mag)+"°";
-    leanEl.style.color = col;
-    sideEl.textContent = mag<1 ? "RECTE" : (lean<0 ? "◄ ESQUERRA" : "DRETA ►");
-    // l'horitzó gira al contrari de la inclinació
-    world.setAttribute("transform","rotate("+(-lean)+" 100 100)");
-    // màxims
-    if(lean < maxL){ maxL = lean; maxLEl.textContent = Math.round(-maxL)+"°"; maxLEl.style.color=colorFor(Math.abs(maxL)); }
-    if(lean > maxR){ maxR = lean; maxREl.textContent = Math.round(maxR)+"°"; maxREl.style.color=colorFor(Math.abs(maxR)); }
+    var mag=Math.abs(lean);
+    el("lean").textContent=Math.round(mag)+"°";
+    el("lean").style.color=colorStep(mag);
+    el("side").textContent = mag<1?"RECTE":(lean<0?"◄ ESQUERRA":"DRETA ►");
+    el("world").setAttribute("transform","rotate("+(-lean)+" 100 100)");
+    if(lean<maxL){ maxL=lean; el("maxL").textContent=Math.round(-maxL)+"°"; el("maxL").style.color=colorStep(Math.abs(maxL)); }
+    if(lean>maxR){ maxR=lean; el("maxR").textContent=Math.round(maxR)+"°"; el("maxR").style.color=colorStep(Math.abs(maxR)); }
+  }
+  setInterval(function(){ if(haveData){ el("hz").textContent=evCount+" Hz"; evCount=0; } },1000);
+
+  // ================= GRAVACIÓ =================
+  function toggleRec(){ recording?stopRec():startRec(); }
+
+  function startRec(){
+    if(!navigator.geolocation){ el("hint").textContent="Aquest navegador no té GPS."; return; }
+    recSamples=[]; recStart=Date.now(); apexSinceFix=0; lastFix=null; recording=true;
+    el("recBtn").textContent="■ Aturar";
+    el("recbar").classList.add("on");
+    el("hint").textContent="Esperant GPS…";
+    watchId=navigator.geolocation.watchPosition(onFix,onGeoErr,{enableHighAccuracy:true,maximumAge:0,timeout:15000});
+    recTimer=setInterval(updateRecBar,250);
+    updateRecBar();
+  }
+  function onFix(pos){
+    if(!recording) return;
+    var c=pos.coords;
+    recSamples.push({ t:Date.now()-recStart, lat:c.latitude, lon:c.longitude,
+                      lean:round1(leanSmooth), apex:round1(apexSinceFix) });
+    apexSinceFix=Math.abs(leanSmooth);
+    el("hint").textContent="";
+  }
+  function onGeoErr(err){ el("hint").textContent="GPS: "+err.message; }
+  function updateRecBar(){
+    var s=Math.floor((Date.now()-recStart)/1000);
+    el("recTxt").textContent="REC  "+fmtDur(s)+"  ·  "+recSamples.length+" punts";
+  }
+  function stopRec(){
+    recording=false;
+    if(watchId!=null){ navigator.geolocation.clearWatch(watchId); watchId=null; }
+    if(recTimer){ clearInterval(recTimer); recTimer=null; }
+    el("recBtn").textContent="● Gravar ruta";
+    el("recbar").classList.remove("on");
+    if(recSamples.length<2){ el("hint").textContent="Ruta massa curta, no desada."; return; }
+    var r={ id:Date.now(), start:recStart, name:dateName(recStart), samples:recSamples.slice() };
+    computeStats(r);
+    routes.unshift(r);
+    store.save(routes);
+    openDetail(r.id);
   }
 
-  // freqüència aproximada cada segon
-  setInterval(function(){ if(haveData){ hzEl.textContent = evCount+" Hz"; evCount=0; } },1000);
+  // ================= ESTADÍSTIQUES =================
+  function computeStats(r){
+    var d=0, mx=0, s=r.samples;
+    for(var i=0;i<s.length;i++){
+      if(s[i].apex>mx) mx=s[i].apex;
+      if(i>0) d+=haversine(s[i-1],s[i]);
+    }
+    r.dist=d; r.maxAbs=mx; r.dur=s.length?s[s.length-1].t/1000:0;
+  }
+  function haversine(a,b){
+    var R=6371000, dLat=(b.lat-a.lat)*D2R, dLon=(b.lon-a.lon)*D2R;
+    var la1=a.lat*D2R, la2=b.lat*D2R;
+    var h=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));
+  }
 
-  // ---- botons ----
+  // ================= LLISTA =================
+  function renderList(){
+    var box=el("routeList");
+    if(!routes.length){
+      box.innerHTML='<div class="empty">Encara no hi ha rutes.<br>Grava la primera des de la pantalla principal.'+
+        (persistent?'':'<br><br><small>(Aquest entorn no desa entre sessions; al teu mòbil sí.)</small>')+'</div>';
+      return;
+    }
+    box.innerHTML="";
+    routes.forEach(function(r){
+      var c=document.createElement("div"); c.className="card";
+      c.innerHTML='<div class="cname">'+r.name+'</div>'+
+        '<div class="cmeta"><b>'+fmtDur(Math.round(r.dur))+'</b> · <b>'+(r.dist/1000).toFixed(2)+' km</b> · màx <b>'+Math.round(r.maxAbs)+'°</b></div>';
+      c.addEventListener("click",function(){ openDetail(r.id); });
+      box.appendChild(c);
+    });
+  }
+
+  // ================= DETALL + MAPA =================
+  var curId=null;
+  function openDetail(id){
+    var r=routes.filter(function(x){return x.id===id;})[0];
+    if(!r) return;
+    curId=id;
+    el("detTitle").textContent=r.name;
+    el("legMax").textContent=Math.round(r.maxAbs)+"°";
+    el("detStats").innerHTML=
+      '<div class="s"><div class="l">Durada</div><div class="v num">'+fmtDur(Math.round(r.dur))+'</div></div>'+
+      '<div class="s"><div class="l">Distància</div><div class="v num">'+(r.dist/1000).toFixed(2)+' km</div></div>'+
+      '<div class="s"><div class="l">Màx inclin.</div><div class="v num" style="color:'+leanColor(1)+'">'+Math.round(r.maxAbs)+'°</div></div>';
+    show("detail");
+    requestAnimationFrame(function(){ drawMap(r); });
+  }
+  function leanColor(v){ v=Math.max(0,Math.min(1,v)); return "hsl("+(140*(1-v))+",85%,52%)"; }
+
+  function drawMap(r){
+    var cvs=el("map"), wrap=cvs.parentNode;
+    var cw=wrap.clientWidth, ch=wrap.clientHeight, dpr=window.devicePixelRatio||1;
+    cvs.width=cw*dpr; cvs.height=ch*dpr;
+    var ctx=cvs.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,cw,ch);
+    var s=r.samples; if(s.length<2) return;
+    var minLat=1e9,maxLat=-1e9,minLon=1e9,maxLon=-1e9;
+    s.forEach(function(p){ if(p.lat<minLat)minLat=p.lat; if(p.lat>maxLat)maxLat=p.lat;
+                           if(p.lon<minLon)minLon=p.lon; if(p.lon>maxLon)maxLon=p.lon; });
+    var latMid=(minLat+maxLat)/2, kx=Math.cos(latMid*D2R);
+    var wW=Math.max((maxLon-minLon)*kx,1e-9), wH=Math.max(maxLat-minLat,1e-9);
+    var pad=20, sc=Math.min((cw-2*pad)/wW,(ch-2*pad)/wH);
+    var offX=pad+((cw-2*pad)-wW*sc)/2, offY=pad+((ch-2*pad)-wH*sc)/2;
+    function px(lon){ return offX+(lon-minLon)*kx*sc; }
+    function py(lat){ return offY+(maxLat-lat)*sc; }
+    var mx=r.maxAbs||1;
+    ctx.lineWidth=4; ctx.lineCap="round"; ctx.lineJoin="round";
+    for(var i=1;i<s.length;i++){
+      ctx.strokeStyle=leanColor((s[i].apex||0)/mx);
+      ctx.beginPath(); ctx.moveTo(px(s[i-1].lon),py(s[i-1].lat)); ctx.lineTo(px(s[i].lon),py(s[i].lat)); ctx.stroke();
+    }
+    // inici (cercle) i final (quadrat)
+    ctx.fillStyle="#EAECEF";
+    ctx.beginPath(); ctx.arc(px(s[0].lon),py(s[0].lat),5,0,6.283); ctx.fill();
+    var e=s[s.length-1]; ctx.fillRect(px(e.lon)-4,py(e.lat)-4,8,8);
+  }
+
+  // ================= GPX =================
+  function exportGpx(){
+    var r=routes.filter(function(x){return x.id===curId;})[0]; if(!r) return;
+    var out='<?xml version="1.0" encoding="UTF-8"?>\n';
+    out+='<gpx version="1.1" creator="Inclinometre" xmlns="http://www.topografix.com/GPX/1/1">\n';
+    out+='<trk><name>'+r.name+'</name><trkseg>\n';
+    r.samples.forEach(function(p){
+      var iso=new Date(r.start+p.t).toISOString();
+      out+='<trkpt lat="'+p.lat.toFixed(6)+'" lon="'+p.lon.toFixed(6)+'">'+
+           '<time>'+iso+'</time><extensions><lean>'+p.lean+'</lean></extensions></trkpt>\n';
+    });
+    out+='</trkseg></trk></gpx>\n';
+    var blob=new Blob([out],{type:"application/gpx+xml"});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement("a");
+    a.href=url; a.download="ruta_"+r.id+".gpx";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); },1500);
+  }
+
+  function delRoute(){
+    routes=routes.filter(function(x){return x.id!==curId;});
+    store.save(routes); renderList(); show("routes");
+  }
+
+  // ================= UTILS =================
+  function round1(x){ return Math.round(x*10)/10; }
+  function fmtDur(s){ var m=Math.floor(s/60), ss=s%60; return m+":"+(ss<10?"0":"")+ss; }
+  function dateName(ts){
+    var d=new Date(ts);
+    var p=function(n){return (n<10?"0":"")+n;};
+    return p(d.getDate())+"/"+p(d.getMonth()+1)+"/"+d.getFullYear()+"  "+p(d.getHours())+":"+p(d.getMinutes());
+  }
+
+  // ================= BOTONS =================
   el("startBtn").addEventListener("click", start);
+  el("recBtn").addEventListener("click", toggleRec);
   el("calBtn").addEventListener("click", function(){
-    rollZero = lastRoll; leanSmooth = 0; render(0);
-    hint.textContent="Zero calibrat.";
-    setTimeout(function(){ if(hint.textContent==="Zero calibrat.") hint.textContent=""; },1500);
+    rollZero=lastRoll; leanSmooth=0; render(0);
+    el("hint").textContent="Zero calibrat.";
+    setTimeout(function(){ if(el("hint").textContent==="Zero calibrat.") el("hint").textContent=""; },1500);
   });
   el("resetBtn").addEventListener("click", function(){
-    maxL=0; maxR=0; maxLEl.textContent="0°"; maxREl.textContent="0°";
-    maxLEl.style.color=getCss("--g1"); maxREl.style.color=getCss("--g1");
+    maxL=0; maxR=0; el("maxL").textContent="0°"; el("maxR").textContent="0°";
+    el("maxL").style.color=css("--g1"); el("maxR").style.color=css("--g1");
   });
+  el("toRoutes").addEventListener("click", function(){ renderList(); show("routes"); });
+  el("backLive").addEventListener("click", function(){ show("live"); });
+  el("backRoutes").addEventListener("click", function(){ show("routes"); });
+  el("gpxBtn").addEventListener("click", exportGpx);
+  el("delBtn").addEventListener("click", delRoute);
 })();
 </script>
 </body>
